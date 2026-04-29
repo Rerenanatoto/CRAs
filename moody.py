@@ -1,24 +1,19 @@
-# ============================================================
-# Moody's Sovereign Rating Methodology – Streamlit module
-# ============================================================
-
 import math
-import json
-import io
-
-import numpy as np
+import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
-import streamlit as st
 
-# ────────────────────────────────────────────
-# Rating scale & scorecard weights
-# ────────────────────────────────────────────
+# ==============================================================
+# Constantes
+# ==============================================================
 
 RATING_SCALE = [
-    "Aaa","Aa1","Aa2","Aa3","A1","A2","A3",
-    "Baa1","Baa2","Baa3","Ba1","Ba2","Ba3",
-    "B1","B2","B3","Caa1","Caa2","Caa3","Ca","C",
+    "Aaa","Aa1","Aa2","Aa3",
+    "A1","A2","A3",
+    "Baa1","Baa2","Baa3",
+    "Ba1","Ba2","Ba3",
+    "B1","B2","B3",
+    "Caa1","Caa2","Caa3","Ca","C",
 ]
 
 FACTOR_WEIGHTS = {
@@ -30,71 +25,67 @@ FACTOR_WEIGHTS = {
 
 SUB_FACTORS = {
     "Economic Strength": [
-        ("GDP per capita (US$)",          0.50),
-        ("Nominal GDP (US$ bn)",          0.25),
-        ("Real GDP growth (5yr avg, %)",  0.25),
+        ("Growth dynamics",      0.50),
+        ("Scale of the economy", 0.25),
+        ("National income",      0.25),
     ],
     "Institutions & Governance": [
-        ("WB Government Effectiveness",   0.34),
-        ("WB Rule of Law",                0.33),
-        ("WB Control of Corruption",      0.33),
+        ("Institutional framework & effectiveness", 0.50),
+        ("Policy credibility & effectiveness",      0.25),
+        ("Transparency & accountability",           0.25),
     ],
     "Fiscal Strength": [
-        ("General government debt (% GDP)",   0.50),
-        ("Interest payments (% Revenue)",     0.25),
-        ("General government balance (% GDP)",0.25),
+        ("Debt burden",                0.50),
+        ("Debt affordability",         0.25),
+        ("Government liquidity risks", 0.25),
     ],
     "Susceptibility to Event Risk": [
-        ("Political risk score (1-6)",        0.25),
-        ("Banking sector risk score (1-6)",   0.25),
-        ("External vulnerability score (1-6)",0.25),
-        ("Government liquidity risk (1-6)",   0.25),
+        ("Political risk",           0.25),
+        ("Government liquidity risk",0.25),
+        ("Banking sector risk",      0.25),
+        ("External vulnerability",   0.25),
     ],
 }
 
-# ────────────────────────────────────────────
+# ==============================================================
 # Helpers
-# ────────────────────────────────────────────
+# ==============================================================
 
-def score_to_numeric(score):
-    return max(1, min(21, round(score)))
+def score_to_numeric(rating: str) -> int:
+    if rating in RATING_SCALE:
+        return len(RATING_SCALE) - RATING_SCALE.index(rating)
+    return 1
 
-def numeric_to_rating(n):
-    idx = max(0, min(len(RATING_SCALE)-1, int(n)-1))
+def numeric_to_rating(n: float) -> str:
+    idx = max(0, min(len(RATING_SCALE)-1, len(RATING_SCALE) - int(round(n))))
     return RATING_SCALE[idx]
 
-def rating_to_numeric(r):
-    if r in RATING_SCALE:
-        return RATING_SCALE.index(r) + 1
-    return 10
+def rating_to_numeric(r: str) -> int:
+    try:
+        return len(RATING_SCALE) - RATING_SCALE.index(r)
+    except ValueError:
+        return 1
 
-def apply_notches(base, adj):
-    idx = RATING_SCALE.index(base) if base in RATING_SCALE else 9
+def apply_notches(base: str, adj: int) -> str:
+    if base not in RATING_SCALE:
+        return base
+    idx = RATING_SCALE.index(base)
     new_idx = max(0, min(len(RATING_SCALE)-1, idx - adj))
     return RATING_SCALE[new_idx]
 
-def clamp(x, lo=1.0, hi=6.0):
+def clamp(x, lo=1, hi=21):
     return max(lo, min(hi, x))
 
-# ────────────────────────────────────────────
-# Module-level defaults for session state
-# ────────────────────────────────────────────
-
 _DEFAULTS = {}
-for factor, subs in SUB_FACTORS.items():
-    for label, _ in subs:
-        key = f"moody_{factor}_{label}"
-        _DEFAULTS[key] = 3.0
+for _f, subs in SUB_FACTORS.items():
+    for _s, _ in subs:
+        _DEFAULTS[f"moody_{_f}_{_s}"] = 10
 
 def _init_state():
     for k, v in _DEFAULTS.items():
         st.session_state.setdefault(k, v)
 
-# ────────────────────────────────────────────
-# Build radar chart
-# ────────────────────────────────────────────
-
-def build_radar(scores):
+def build_radar(scores: dict):
     cats = list(scores.keys())
     vals = [scores[c] for c in cats]
     cats2 = cats + [cats[0]]
@@ -111,124 +102,97 @@ def build_radar(scores):
     )
     return fig
 
-# ────────────────────────────────────────────
-# Main render function
-# ────────────────────────────────────────────
+# ==============================================================
+# Página principal
+# ==============================================================
 
 def render_moody():
     _init_state()
-
     st.title("Moody's Sovereign Rating Methodology")
-    st.caption(
-        "Scorecard simplificado com 4 fatores, pesos iguais de 25%. "
-        "Cada sub-fator recebe um score de 1 (mais forte) a 21 (mais fraco). "
-        "O rating indicativo resulta da média ponderada."
-    )
 
-    method_page = st.radio(
-        "Seção",
-        ["Visão geral"] + list(FACTOR_WEIGHTS.keys()) + ["Resultados"],
-        horizontal=True,
-        key="moody_page",
+    pages = (
+        ["Visão geral"]
+        + list(SUB_FACTORS.keys())
+        + ["Resultados"]
     )
-
+    page = st.selectbox("Navegação", pages, key="moody_page",
+                         label_visibility="collapsed")
     st.markdown("---")
 
-    # ── Visão geral ─────────────────────────────
-    if method_page == "Visão geral":
-        st.subheader("Estrutura do Scorecard")
+    if page == "Visão geral":
+        st.markdown("""
+A metodologia soberana da Moody's avalia **quatro fatores**, cada um com peso igual de 25 %:
+
+| Fator | Peso |
+|-------|------|
+| Economic Strength | 25 % |
+| Institutions & Governance | 25 % |
+| Fiscal Strength | 25 % |
+| Susceptibility to Event Risk | 25 % |
+
+Cada fator é composto por sub-fatores avaliados numa escala de **1 (mais fraco) a 21 (mais forte)**.
+O scorecard gera um rating indicativo que pode ser ajustado por notching.
+        """)
         rows = []
-        for factor, weight in FACTOR_WEIGHTS.items():
-            subs = SUB_FACTORS[factor]
-            sub_labels = ", ".join([s[0] for s in subs])
-            rows.append({
-                "Factor": factor,
-                "Weight": f"{weight:.0%}",
-                "Sub-factors": sub_labels,
-            })
+        for f, subs in SUB_FACTORS.items():
+            for s, w in subs:
+                rows.append({"Fator": f, "Sub-fator": s, "Peso no fator": f"{w:.0%}"})
         st.dataframe(pd.DataFrame(rows), use_container_width=True, hide_index=True)
-        st.info(
-            "Navegue pelas seções acima para preencher cada fator. "
-            "Depois vá em **Resultados** para ver o rating indicativo."
-        )
 
-    # ── Factor pages ────────────────────────────
-    elif method_page in FACTOR_WEIGHTS:
-        factor = method_page
-        st.subheader(f"{factor} (peso = {FACTOR_WEIGHTS[factor]:.0%})")
-        subs = SUB_FACTORS[factor]
-        sub_scores = []
-        for label, sub_w in subs:
-            key = f"moody_{factor}_{label}"
-            val = st.slider(
-                f"{label} (peso relativo {sub_w:.0%})",
-                min_value=1, max_value=21, value=int(st.session_state.get(key, 3)),
+    elif page in SUB_FACTORS:
+        st.subheader(page)
+        st.caption(f"Peso no scorecard: {FACTOR_WEIGHTS[page]:.0%}")
+        for sub, weight in SUB_FACTORS[page]:
+            key = f"moody_{page}_{sub}"
+            st.slider(
+                f"{sub}  (peso {weight:.0%})",
+                min_value=1, max_value=21,
+                value=st.session_state.get(key, 10),
                 key=key,
-                help="1 = mais forte / Aaa … 21 = mais fraco / C",
             )
-            sub_scores.append((label, sub_w, val))
 
-        weighted = sum(w * v for _, w, v in sub_scores)
-        st.metric(f"Score ponderado – {factor}", f"{weighted:.1f}")
-        st.caption("Esse score entra na média final com o peso do fator.")
-
-    # ── Resultados ──────────────────────────────
-    elif method_page == "Resultados":
+    elif page == "Resultados":
         st.subheader("Resultados do Scorecard")
-
         factor_scores = {}
-        for factor, weight in FACTOR_WEIGHTS.items():
-            subs = SUB_FACTORS[factor]
-            weighted = 0.0
-            for label, sub_w in subs:
-                key = f"moody_{factor}_{label}"
-                val = float(st.session_state.get(key, 3))
-                weighted += sub_w * val
-            factor_scores[factor] = round(weighted, 2)
+        for fac, subs in SUB_FACTORS.items():
+            total = 0.0
+            for sub, w in subs:
+                val = float(st.session_state.get(f"moody_{fac}_{sub}", 10))
+                total += val * w
+            factor_scores[fac] = round(total, 2)
 
-        overall = sum(
-            FACTOR_WEIGHTS[f] * factor_scores[f]
-            for f in FACTOR_WEIGHTS
-        )
+        weighted = sum(factor_scores[f] * FACTOR_WEIGHTS[f] for f in factor_scores)
+        indicative = numeric_to_rating(weighted)
 
-        cols = st.columns(len(FACTOR_WEIGHTS))
-        for col, (factor, sc) in zip(cols, factor_scores.items()):
-            col.metric(factor, f"{sc:.1f}")
-
-        st.markdown("---")
         c1, c2, c3 = st.columns(3)
-        c1.metric("Overall weighted score", f"{overall:.2f}")
-        indicative_num = score_to_numeric(overall)
-        indicative_rating = numeric_to_rating(indicative_num)
-        c2.metric("Indicative rating", indicative_rating)
-
-        notch_adj = st.selectbox(
-            "Notch adjustment (-2 to +2)",
-            options=[-2, -1, 0, 1, 2],
-            index=2,
-            key="moody_notch_adj",
-        )
-        final_rating = apply_notches(indicative_rating, notch_adj)
-        c3.metric("Final rating", final_rating)
+        c1.metric("Weighted average score", f"{weighted:.2f}")
+        c2.metric("Indicative rating", indicative)
+        c3.metric("Numeric equiv.", f"{rating_to_numeric(indicative)}")
 
         st.markdown("---")
-        st.subheader("Radar (1 = mais forte)")
+        st.subheader("Ajustes de notching")
+        notch = st.selectbox("Notch adjustment", [-2, -1, 0, 1, 2], index=2,
+                             key="moody_notch")
+        final = apply_notches(indicative, notch)
+        st.metric("Final rating", final)
+
+        st.markdown("---")
+        st.subheader("Radar dos fatores")
         fig = build_radar(factor_scores)
         try:
             st.plotly_chart(fig, use_container_width=True)
         except TypeError:
             st.plotly_chart(fig)
 
-        with st.expander("Detalhes do scorecard"):
-            detail_rows = []
-            for factor in FACTOR_WEIGHTS:
-                for label, sub_w in SUB_FACTORS[factor]:
-                    key = f"moody_{factor}_{label}"
-                    val = float(st.session_state.get(key, 3))
-                    detail_rows.append({
-                        "Factor": factor,
-                        "Sub-factor": label,
-                        "Weight (within factor)": f"{sub_w:.0%}",
-                        "Score": val,
+        with st.expander("Detalhes por sub-fator"):
+            rows = []
+            for fac, subs in SUB_FACTORS.items():
+                for sub, w in subs:
+                    val = st.session_state.get(f"moody_{fac}_{sub}", 10)
+                    rows.append({
+                        "Fator": fac, "Sub-fator": sub,
+                        "Peso": f"{w:.0%}", "Score": val,
+                        "Contribuição": round(val * w, 2),
                     })
-            st.dataframe(pd.DataFrame(detail_rows), use_container_width=True, hide_index=True)
+            st.dataframe(pd.DataFrame(rows), use_container_width=True,
+                         hide_index=True)
