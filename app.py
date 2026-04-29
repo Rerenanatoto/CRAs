@@ -11,13 +11,29 @@ st.markdown("""
     background-color: #F0EDE8 !important;
 }
 [data-testid="stHeader"] {
-    color: #F0EDE8 !important;
+    border-bottom: none !important;
 }
-/* Sidebar */
+
+/* Texto escuro na área principal */
+.stApp h1, .stApp h2, .stApp h3, .stApp h4, .stApp h5, .stApp h6,
+.stApp p, .stApp li, .stApp span, .stApp label,
+.stApp td, .stApp th, .stApp div,
+.stMarkdown, .stMarkdown * {
+    color: #1a1a1a !important;
+}
+
+/* Sidebar — fundo azul escuro, texto branco */
 section[data-testid="stSidebar"] {
     background-color: #1F3864 !important;
 }
-section[data-testid="stSidebar"] * {
+section[data-testid="stSidebar"] label,
+section[data-testid="stSidebar"] span,
+section[data-testid="stSidebar"] p,
+section[data-testid="stSidebar"] h1,
+section[data-testid="stSidebar"] h2,
+section[data-testid="stSidebar"] h3,
+section[data-testid="stSidebar"] .stMarkdown,
+section[data-testid="stSidebar"] .stMarkdown * {
     color: #FFFFFF !important;
 }
 section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
@@ -25,26 +41,49 @@ section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
     border: 1px solid rgba(255,255,255,0.3) !important;
     border-radius: 8px !important;
 }
-/* Inputs brancos */
+
+/* Inputs brancos com texto preto */
 input, textarea, .stNumberInput input,
 div[data-baseweb="select"] > div,
 .stTextInput input {
     background-color: #FFFFFF !important;
     color: #000000 !important;
+    -webkit-text-fill-color: #000000 !important;
 }
+[data-baseweb="select"] * {
+    color: #1a1a1a !important;
+    -webkit-text-fill-color: #1a1a1a !important;
+}
+[data-baseweb="popover"], [data-baseweb="popover"] ul, [data-baseweb="popover"] li,
+[data-baseweb="menu"], [data-baseweb="menu"] ul, [data-baseweb="menu"] li {
+    background-color: #FFFFFF !important;
+    color: #1a1a1a !important;
+}
+[data-baseweb="menu"] li:hover {
+    background-color: #E3F2FD !important;
+}
+.stNumberInput button {
+    background-color: #FFFFFF !important;
+    color: #1a1a1a !important;
+    border-color: #ccc !important;
+}
+
 /* Métricas */
 [data-testid="stMetricValue"] {
     color: #1F3864 !important;
     font-weight: 700 !important;
 }
+
 /* Tabs */
 button[data-baseweb="tab"] {
+    color: #1a1a1a !important;
     font-weight: 600 !important;
 }
 button[data-baseweb="tab"][aria-selected="true"] {
     border-bottom: 3px solid #1F3864 !important;
     color: #1F3864 !important;
 }
+
 /* Botões download */
 .stDownloadButton > button {
     background-color: #1F3864 !important;
