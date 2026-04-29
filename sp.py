@@ -915,11 +915,11 @@ def render_table_tab(df: pd.DataFrame):
 
 def render_methodology_tab():
     st.header("Metodologia")
-    method_page = st.radio(
+    method_page = st.selectbox(
         "Seção da metodologia",
         ["Visão geral", "Economic", "Fiscal", "Monetary", "External", "Institutional", "Resultados"],
-        horizontal=True,
         key="method_page_select",
+        label_visibility="collapsed",
     )
     st.markdown("---")
 
