@@ -1129,7 +1129,7 @@ def render_fitch():
     # ========== TAB 1: Metodologia ==========
     with tab_met:
         st.title("Fitch Sovereign Rating Methodology")
-        sub_page = st.radio(
+        sub_page = st.selectbox(
             "Seção",
             [
                 "Visão geral",
@@ -1140,7 +1140,7 @@ def render_fitch():
                 "Qualitative Overlay (QO)",
                 "Resultados",
             ],
-            horizontal=False, key="met_subpage",
+            key="met_subpage", label_visibility="collapsed",
         )
         if sub_page == "Visão geral":
             render_methodology_overview()
@@ -1210,4 +1210,3 @@ def render_fitch():
                 df_table = df_table[df_table["country_name"].isin(sel_countries_tbl)]
 
             render_comparator_table(df_table)
-
