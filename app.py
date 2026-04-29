@@ -1,28 +1,72 @@
-# ============================================================
-# Sovereign Rating Toolkit – Unified entry point
-# ============================================================
 import streamlit as st
 
-st.set_page_config(page_title="Sovereign Rating Toolkit", layout="wide")
+st.set_page_config(page_title="Sovereign Rating App", layout="wide")
 
-# ── CSS leve ────────────────────────────────────────────────
+# ── CSS: fundo off-white, header escondido, inputs brancos ──
 st.markdown("""
 <style>
-[data-testid="stSidebar"]  {min-width:260px; max-width:320px}
-.block-container           {padding-top:1.5rem}
-div[data-baseweb="select"] {min-width:220px}
+/* Fundo geral */
+.stApp, [data-testid="stAppViewContainer"],
+[data-testid="stHeader"] {
+    background-color: #F0EDE8 !important;
+}
+[data-testid="stHeader"] {
+    color: #F0EDE8 !important;
+}
+/* Sidebar */
+section[data-testid="stSidebar"] {
+    background-color: #1F3864 !important;
+}
+section[data-testid="stSidebar"] * {
+    color: #FFFFFF !important;
+}
+section[data-testid="stSidebar"] .stSelectbox div[data-baseweb="select"] {
+    background-color: rgba(255,255,255,0.15) !important;
+    border: 1px solid rgba(255,255,255,0.3) !important;
+    border-radius: 8px !important;
+}
+/* Inputs brancos */
+input, textarea, .stNumberInput input,
+div[data-baseweb="select"] > div,
+.stTextInput input {
+    background-color: #FFFFFF !important;
+    color: #000000 !important;
+}
+/* Métricas */
+[data-testid="stMetricValue"] {
+    color: #1F3864 !important;
+    font-weight: 700 !important;
+}
+/* Tabs */
+button[data-baseweb="tab"] {
+    font-weight: 600 !important;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    border-bottom: 3px solid #1F3864 !important;
+    color: #1F3864 !important;
+}
+/* Botões download */
+.stDownloadButton > button {
+    background-color: #1F3864 !important;
+    color: #FFFFFF !important;
+    border: none !important;
+    border-radius: 8px !important;
+}
+.stDownloadButton > button:hover {
+    background-color: #16304F !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
-# ── Seletor de agência ─────────────────────────────────────
+# ── sidebar: escolha da agência ──
+st.sidebar.title("⚙️ Configurações")
 agency = st.sidebar.selectbox(
-    "Rating agency",
+    "Agência de rating",
     ["Moody's", "Fitch", "S&P"],
-    key="agency_selector",
+    key="agency_select",
 )
 
-st.sidebar.markdown("---")
-
+# ── despacho ──
 if agency == "Moody's":
     from moody import render_moody
     render_moody()
