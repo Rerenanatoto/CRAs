@@ -19,47 +19,47 @@ ALPHA_SCORES = {"aaa":1,"aa":3,"a":6,"baa":9,"ba":12,"b":15,"caa":18,"ca":20}
 # ═══════════════════════════════════════════════════════════════════════
 
 F2_LEGEXEC_OPTS = [
-    "AAA | WGI >1.5 · Admin altamente profissional, absorve choques, bench strength excepcional",
-    "AA | WGI 1.0–1.5 · Admin profissional, pode ter restrições, absorve choques mas lenta",
-    "A | WGI 0.5–1.0 · Admin geralmente profissional, lenta ao lidar com mudanças",
-    "BAA | WGI 0.0–0.5 · Núcleo capaz mas pouca profundidade, luta p/ responder a choques",
-    "BA | WGI -0.5–0.0 · Núcleo capaz mas pouca profundidade, luta p/ responder a choques",
-    "B | WGI -1.0– -0.5 · Admin frequentemente incapaz, acumula atrasos",
-    "CAA | WGI -1.5– -1.0 · Admin frequentemente incapaz, acumula atrasos significativos",
-    "CA | WGI < -1.5 · Falta habilidades técnicas, fraca disposição a pagar credores",
+    "WGI >1.5 · Highly professional admin, absorbs shocks, exceptionally deep bench strength",
+    "WGI 1.0–1.5 · Professional admin, may face capacity constraints, absorbs shocks but slow",
+    "WGI 0.5–1.0 · Generally professional admin, slow when dealing with changing circumstances",
+    "WGI 0.0–0.5 · Capable core but limited depth, struggles to respond to shocks",
+    "WGI -0.5–0.0 · Capable core but limited depth, struggles to respond to shocks",
+    "WGI -1.0– -0.5 · Admin often unable to support policymaking, backlogs accumulate",
+    "WGI -1.5– -1.0 · Admin often unable to support policymaking, significant backlogs",
+    "WGI < -1.5 · Lacks technical skills, weak willingness to pay creditors",
 ]
 
 F2_CIVILJUD_OPTS = [
-    "AAA | WGI >1.5 · Aplicação de leis previsível, judiciário independente, pouca corrupção",
-    "AA | WGI 1.0–1.5 · Aplicação previsível, judiciário independente, pouca corrupção",
-    "A | WGI 0.5–1.0 · Geralmente previsível, judiciário nem sempre independente",
-    "BAA | WGI 0.0–0.5 · Geralmente previsível, corrupção pode ser problema, tribunais lentos",
-    "BA | WGI -0.5–0.0 · Às vezes previsível, judiciário sofre influência política, corrupção significativa",
-    "B | WGI -1.0– -0.5 · Às vezes previsível, influência política, corrupção significativa",
-    "CAA | WGI -1.5– -1.0 · Imprevisível, poucos controles, corrupção endêmica",
-    "CA | WGI < -1.5 · Imprevisível, sem controles, corrupção endêmica, tribunais ineficazes",
+    "WGI >1.5 · Predictable law enforcement, independent judiciary, low corruption",
+    "WGI 1.0–1.5 · Predictable enforcement, independent judiciary, low corruption",
+    "WGI 0.5–1.0 · Generally predictable, judiciary not always independent",
+    "WGI 0.0–0.5 · Generally predictable, corruption may be a problem, slow courts",
+    "WGI -0.5–0.0 · Sometimes predictable, judiciary subject to political influence, significant corruption",
+    "WGI -1.0– -0.5 · Sometimes predictable, political influence, significant corruption",
+    "WGI -1.5– -1.0 · Unpredictable, few checks & balances, endemic corruption",
+    "WGI < -1.5 · Unpredictable, no checks & balances, endemic corruption, ineffective courts",
 ]
 
 F2_FISCAL_OPTS = [
-    "AAA · Dív/PIB estável nos ciclos, orçamento equilibrado/superávit, metas cumpridas",
-    "AA · Dív/PIB sobe em recessão mas cai, déficit pequeno, metas cumpridas",
-    "A · Dív/PIB sobe lentamente, déficit pequeno/estável, metas às vezes não cumpridas",
-    "BAA · Dív/PIB sobe lentamente, déficit, estrutura rígida, metas às vezes não cumpridas",
-    "BA · Dív/PIB sobe materialmente em recessões, déficit, estrutura rígida, metas freq. não cumpridas",
-    "B · Déficits são norma e grandes, estrutura altamente rígida, evasão fiscal alta",
-    "CAA · Dív/PIB sobe insustentavelmente, déficits norma, sem metas fiscais, contas opacas",
-    "CA · Restrições muito significativas na política fiscal, gastos ad hoc, contas opacas",
+    "Debt/GDP stable through cycles, balanced budget/surplus, targets met",
+    "Debt/GDP rises in recession but falls, small deficit, targets met",
+    "Debt/GDP rises slowly, small/stable deficit, targets sometimes missed",
+    "Debt/GDP rises slowly, deficit, rigid structure, targets sometimes missed",
+    "Debt/GDP rises materially in recessions, deficit, rigid structure, targets frequently missed",
+    "Deficits are the norm and large, highly rigid structure, high tax evasion",
+    "Debt/GDP rises unsustainably, deficits the norm, no fiscal targets, opaque accounts",
+    "Very significant constraints on fiscal policy, ad hoc spending, opaque accounts",
 ]
 
 F2_MONETARY_OPTS = [
-    "AAA · Estabilidade de preços, reformas proativas, BC independente, macroprudencial eficaz",
-    "AA · Geralmente proativo, BC independente e crível, macroprudencial eficaz",
-    "A · Geralmente proativo, BC em geral crível, macroprudencial às vezes falha",
-    "BAA · Reativo/curto-prazista, BC em geral crível, macroprudencial às vezes falha",
-    "BA · Reativo, BC pode não ter ferramentas/consistência, gov. interfere na pol. monetária",
-    "B · Só age sob pressão, BC pode não ter ferramentas, gov. interfere",
-    "CAA · Só age sob pressão, BC ineficaz, sem uso de ferramentas macroprudenciais",
-    "CA · Não endereça desafios de estabilidade, BC ineficaz, sem macroprudencial",
+    "Price stability, proactive reforms, independent CB, effective macroprudential",
+    "Generally proactive, independent & credible CB, effective macroprudential",
+    "Generally proactive, CB generally credible, macroprudential sometimes fails",
+    "Reactive/short-termist, CB generally credible, macroprudential sometimes fails",
+    "Reactive, CB may lack tools/consistency, gov. interferes in monetary policy",
+    "Acts only under pressure, CB may lack tools, gov. interferes",
+    "Acts only under pressure, CB ineffective, no macroprudential tools used",
+    "Does not address stability challenges, CB ineffective, no macroprudential",
 ]
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -553,61 +553,67 @@ def render_moody():
     # ═══════════════════════════════════════════════════════════════════
     elif page == "2️⃣ Institutions & Governance":
         st.header("2️⃣ Factor 2 – Institutions & Governance")
-        st.markdown("Avalia a qualidade institucional e a eficácia das políticas públicas.")
+        st.markdown("Assesses institutional quality and policy effectiveness.")
         st.markdown("---")
 
-        col1, col2 = st.columns(2)
-        with col1:
-            f2_le = st.selectbox(
-                "🏛️ Quality of Legislative & Executive Institutions (20%)",
-                options=F2_LEGEXEC_OPTS, index=st.session_state.f2_le,
-                help="Qualidade das instituições legislativas e executivas",
-            )
-            st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
-        with col2:
-            f2_cj = st.selectbox(
-                "⚖️ Strength of Civil Society & Judiciary (20%)",
-                options=F2_CIVILJUD_OPTS, index=st.session_state.f2_cj,
-                help="Força da sociedade civil e do judiciário",
-            )
-            st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
-        col3, col4 = st.columns(2)
-        with col3:
-            f2_fp = st.selectbox(
-                "💰 Fiscal Policy Effectiveness (30%)",
-                options=F2_FISCAL_OPTS, index=st.session_state.f2_fp,
-                help="Eficácia da política fiscal",
-            )
-            st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
-        with col4:
-            f2_mp = st.selectbox(
-                "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
-                options=F2_MONETARY_OPTS, index=st.session_state.f2_mp,
-                help="Eficácia da política monetária e macroeconômica",
-            )
-            st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
+        f2_le = st.selectbox(
+            "🏛️ Quality of Legislative & Executive Institutions (20%)",
+            options=F2_LEGEXEC_OPTS, index=st.session_state.f2_le,
+            help="Quality of legislative and executive institutions (pp. 8-10)",
+        )
+        st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
+        _cat = ALPHA_CATS[st.session_state.f2_le]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
+        f2_cj = st.selectbox(
+            "⚖️ Strength of Civil Society & Judiciary (20%)",
+            options=F2_CIVILJUD_OPTS, index=st.session_state.f2_cj,
+            help="Strength of civil society and judiciary (pp. 10-12)",
+        )
+        st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
+        _cat = ALPHA_CATS[st.session_state.f2_cj]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
+        st.markdown("---")
+
+        f2_fp = st.selectbox(
+            "💰 Fiscal Policy Effectiveness (30%)",
+            options=F2_FISCAL_OPTS, index=st.session_state.f2_fp,
+            help="Fiscal policy effectiveness (pp. 11-12)",
+        )
+        st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
+        _cat = ALPHA_CATS[st.session_state.f2_fp]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
+        f2_mp = st.selectbox(
+            "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
+            options=F2_MONETARY_OPTS, index=st.session_state.f2_mp,
+            help="Monetary and macroeconomic policy effectiveness (pp. 13-14)",
+        )
+        st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
+        _cat = ALPHA_CATS[st.session_state.f2_mp]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
         st.markdown("---")
         col5, col6 = st.columns(2)
         with col5:
             dh_opts = [0, -1, -2, -3]
             f2_dh = st.selectbox(
-                "📉 Ajuste – Histórico de Default (notches)",
+                "📉 Adjustment – Default History (notches)",
                 options=dh_opts, index=dh_opts.index(st.session_state.f2_dh),
-                help="Penalização por histórico de default (0 a -3)",
+                help="Penalty for default history (0 to -3)",
             )
             st.session_state.f2_dh = f2_dh
         with col6:
             ao_opts = list(range(-3, 4))
             f2_ao = st.selectbox(
-                "🔧 Ajuste – Outros (notches)",
+                "🔧 Adjustment – Other (notches)",
                 options=ao_opts, index=ao_opts.index(st.session_state.f2_ao),
-                help="Ajuste discricionário de -3 a +3",
+                help="Discretionary adjustment -3 to +3",
             )
             st.session_state.f2_ao = f2_ao
 
-    # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 3 – FISCAL STRENGTH
-    # ═══════════════════════════════════════════════════════════════════
+    
     elif page == "3️⃣ Fiscal Strength":
         st.header("3️⃣ Factor 3 – Fiscal Strength")
         st.markdown("Avalia a sustentabilidade fiscal: endividamento e capacidade de pagamento.")
