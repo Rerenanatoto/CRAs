@@ -63,6 +63,43 @@ F2_MONETARY_OPTS = [
 ]
 
 # ═══════════════════════════════════════════════════════════════════════
+# DESCRIPTIVE OPTIONS – FACTOR 4 (Susceptibility to Event Risk)
+# ═══════════════════════════════════════════════════════════════════════
+
+F4_POLITICAL_OPTS = [
+    "WGI V&A >1.5, PS >1.5 · Low unemployment, uniform wealth, no social conflict, smooth transitions, harmonious geopolitics",
+    "WGI V&A 1.0–1.5, PS 1.0–1.5 · Low unemployment, no significant social conflict, smooth transitions, harmonious geopolitics",
+    "WGI V&A 0.5–1.0, PS 0.5–1.0 · Moderate unemployment, some regional disparities, some social conflict, orderly transitions",
+    "WGI V&A 0.0–0.5, PS 0.0–0.5 · Moderate unemployment, some disparities, policy continuity may be challenged by gov. changes",
+    "WGI V&A -0.5–0.0, PS -0.5–0.0 · High unemployment, unequal wealth, social tensions possible, policy predictability reduced",
+    "WGI V&A -1.0– -0.5, PS -1.0– -0.5 · High unemployment, deep social divisions, credit-negative policies likely after gov. changes",
+    "WGI V&A -1.5– -1.0, PS -1.5– -1.0 · Mass unemployment, communal tensions/armed conflict, severe disruption of institutions",
+    "WGI V&A < -1.5, PS < -1.5 · Mass unemployment, ongoing armed conflict, complete policy dysfunction, opaque succession",
+]
+
+F4_GOVLIQ_OPTS = [
+    "Extremely deep, liquid domestic market; reserve currency; benchmark issuer; unquestioned access globally",
+    "Very deep domestic market; strong track record of reliable global access; broad and diverse investor base",
+    "Deep domestic market; generally reliable global access; reasonably broad and diverse investor base",
+    "Moderately deep domestic market; generally reliable access; some concentration or funding mix risks",
+    "Intermittent access to narrow domestic markets; limited global access; some official sector reliance",
+    "Intermittent access to narrow/underdeveloped markets; constrained global access; significant reliance on official lenders",
+    "Very limited domestic market access; no/virtually no market-based FX financing; limited official lending",
+    "No meaningful market access; heavily dependent on emergency/official funding or in effective default",
+]
+
+F4_EXTVULN_OPTS = [
+    "Structural CA surplus; low net external liabilities; unfettered access to intl. capital markets (reserve currency)",
+    "Structural CA surplus; low net external liabilities; stable access to FX markets; no difficulty servicing ext. debt",
+    "Small CA deficits (<5% GDP) mostly financed by FDI; moderate external liabilities; adequate reserves",
+    "Small CA deficits mostly financed by FDI; moderate external liabilities; limited vulnerability; EVI around 100%",
+    "Large/persistent CA deficits (>5% GDP); high external liabilities; dependent on portfolio flows; EVI rising",
+    "Large/persistent CA deficits; very high external liabilities or large short-term debt; EVI around 200%",
+    "Very large structural CA deficits; very high external liabilities; reserves at very low levels; EVI >200%",
+    "Unsustainable external position; reserves near zero; in or near external debt distress",
+]
+
+# ═══════════════════════════════════════════════════════════════════════
 # FUNÇÕES AUXILIARES
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -682,63 +719,79 @@ def render_moody():
     # ═══════════════════════════════════════════════════════════════════
     elif page == "4️⃣ Susceptibility to Event Risk":
         st.header("4️⃣ Factor 4 – Susceptibility to Event Risk")
-        st.markdown("Avalia os riscos de eventos: político, liquidez, bancário e externo. "
-                    "O SETR é determinado pelo **pior** (maior score) dos 4 sub-fatores.")
+        st.markdown("Assesses event risks: political, government liquidity, banking sector and external vulnerability. "
+                    "The SETR is determined by the **worst** (highest score) of the 4 sub-factors.")
         st.markdown("---")
-        alpha_opts = [c.upper() for c in ALPHA_CATS]
+
         alpha21_opts = [r.upper() for r in RATING_SCALE]
+
         st.subheader("🗳️ Political Risk")
-        f4_pol = st.selectbox("Domestic Political Risk", options=alpha_opts,
-            index=st.session_state.f4_pol, help="Risco político doméstico (AAA = menor risco)")
-        st.session_state.f4_pol = alpha_opts.index(f4_pol)
+        f4_pol_sel = st.selectbox("Domestic Political & Geopolitical Risk",
+            options=F4_POLITICAL_OPTS, index=st.session_state.f4_pol,
+            help="Domestic political & geopolitical risk (pp. 16-17)")
+        st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
+        _cat = ALPHA_CATS[st.session_state.f4_pol]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
         st.markdown("---")
+
         st.subheader("💰 Government Liquidity Risk")
-        col1, col2 = st.columns(2)
-        with col1:
-            f4_ease = st.selectbox("Ease of Access to Funding", options=alpha_opts,
-                index=st.session_state.f4_ease, help="Facilidade de acesso a financiamento (AAA = melhor)")
-            st.session_state.f4_ease = alpha_opts.index(f4_ease)
-        with col2:
-            refin_opts = [0, 1, 2]
-            f4_refin = st.selectbox("High Refinancing Risk Adj (notches ↓)", options=refin_opts,
-                index=refin_opts.index(st.session_state.f4_refin),
-                help="Ajuste por alto risco de refinanciamento (0 = sem ajuste, 2 = máx.)")
-            st.session_state.f4_refin = f4_refin
+        f4_ease_sel = st.selectbox("Ease of Access to Funding",
+            options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease,
+            help="Government's ease of access to funding (pp. 18-19)")
+        st.session_state.f4_ease = F4_GOVLIQ_OPTS.index(f4_ease_sel)
+        _cat = ALPHA_CATS[st.session_state.f4_ease]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        refin_opts = [0, 1, 2]
+        f4_refin = st.selectbox("High Refinancing Risk Adj (notches ↓)",
+            options=refin_opts, index=refin_opts.index(st.session_state.f4_refin),
+            help="Adjustment for high refinancing risk (0 = none, 2 = max.)")
+        st.session_state.f4_refin = f4_refin
+
         st.markdown("---")
+
         st.subheader("🏦 Banking Sector Risk")
         col3, col4, col5 = st.columns(3)
         with col3:
-            f4_bsce = st.selectbox("BSCE (Bank System Credit Event)", options=alpha21_opts,
-                index=st.session_state.f4_bsce, help="Probabilidade de evento de crédito sistêmico bancário")
+            f4_bsce = st.selectbox("BSCE (Banking Sector Credit Event)",
+                options=alpha21_opts, index=st.session_state.f4_bsce,
+                help="Probability of systemic banking sector credit event")
             st.session_state.f4_bsce = alpha21_opts.index(f4_bsce)
         with col4:
-            f4_ba = st.number_input("Total Bank Assets / GDP (%)", value=st.session_state.f4_ba,
-                min_value=0.0, max_value=1500.0, step=0.1, format="%.1f",
-                help="Ativos totais do sistema bancário / PIB")
+            f4_ba = st.number_input("Total Bank Assets / GDP (%)",
+                value=st.session_state.f4_ba, min_value=0.0, max_value=1500.0,
+                step=0.1, format="%.1f",
+                help="Total domestic banking system assets / GDP")
             st.session_state.f4_ba = f4_ba
         with col5:
             ba_opts = list(range(-2, 3))
-            f4_badj = st.selectbox("Banking Sector Adj (notches)", options=ba_opts,
-                index=ba_opts.index(st.session_state.f4_badj), help="Ajuste do risco bancário (-2 a +2)")
+            f4_badj = st.selectbox("Banking Sector Adj (notches)",
+                options=ba_opts, index=ba_opts.index(st.session_state.f4_badj),
+                help="Banking sector risk adjustment (-2 to +2)")
             st.session_state.f4_badj = f4_badj
-        st.markdown("---")
-        st.subheader("🌐 External Vulnerability Risk")
-        col6, col7 = st.columns(2)
-        with col6:
-            f4_ext = st.selectbox("External Vulnerability Risk", options=alpha_opts,
-                index=st.session_state.f4_ext, help="Risco de vulnerabilidade externa (AAA = menor risco)")
-            st.session_state.f4_ext = alpha_opts.index(f4_ext)
-        with col7:
-            ext_opts = list(range(-2, 3))
-            f4_eadj = st.selectbox("Ext. Vulnerability Adj (notches)", options=ext_opts,
-                index=ext_opts.index(st.session_state.f4_eadj), help="Ajuste de vulnerabilidade externa (-2 a +2)")
-            st.session_state.f4_eadj = f4_eadj
-        st.markdown("---")
-        oth_opts = [0, -1, -2]
-        f4_oth = st.selectbox("🔧 Factor 4 Adj – Outros (notches ↓)", options=oth_opts,
-            index=oth_opts.index(st.session_state.f4_oth), help="Ajuste adicional de 0 a -2")
-        st.session_state.f4_oth = f4_oth
 
+        st.markdown("---")
+
+        st.subheader("🌐 External Vulnerability Risk")
+        f4_ext_sel = st.selectbox("External Vulnerability Risk",
+            options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext,
+            help="External vulnerability risk assessment (pp. 19-20)")
+        st.session_state.f4_ext = F4_EXTVULN_OPTS.index(f4_ext_sel)
+        _cat = ALPHA_CATS[st.session_state.f4_ext]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        ext_opts = list(range(-2, 3))
+        f4_eadj = st.selectbox("Ext. Vulnerability Adj (notches)",
+            options=ext_opts, index=ext_opts.index(st.session_state.f4_eadj),
+            help="External vulnerability adjustment (-2 to +2)")
+        st.session_state.f4_eadj = f4_eadj
+
+        st.markdown("---")
+
+        oth_opts = [0, -1, -2]
+        f4_oth = st.selectbox("🔧 Factor 4 Adj – Other (notches ↓)",
+            options=oth_opts, index=oth_opts.index(st.session_state.f4_oth),
+            help="Additional adjustment for correlated risks (0 to -2)")
+        st.session_state.f4_oth = f4_oth
     # ═══════════════════════════════════════════════════════════════════
     # RESULTADO CONSOLIDADO
     # ═══════════════════════════════════════════════════════════════════
