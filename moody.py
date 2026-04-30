@@ -19,25 +19,25 @@ ALPHA_SCORES = {"aaa":1,"aa":3,"a":6,"baa":9,"ba":12,"b":15,"caa":18,"ca":20}
 # ═══════════════════════════════════════════════════════════════════════
 
 F2_LEGEXEC_OPTS = [
-    "WGI-GE >1.5 · Highly professional admin, absorbs shocks, exceptionally deep bench strength",
-    "WGI-GE 1.0–1.5 · Professional admin, may face capacity constraints, absorbs shocks but slow",
-    "WGI-GE 0.5–1.0 · Generally professional admin, slow when dealing with changing circumstances",
-    "WGI-GE 0.0–0.5 · Capable core but limited depth, struggles to respond to shocks",
-    "WGI-GE -0.5–0.0 · Capable core but limited depth, struggles to respond to shocks",
-    "WGI-GE -1.0– -0.5 · Admin often unable to support policymaking, backlogs accumulate",
-    "WGI-GE -1.5– -1.0 · Admin often unable to support policymaking, significant backlogs",
-    "WGI-GE < -1.5 · Lacks technical skills, weak willingness to pay creditors",
+    "WGI >1.5 · Highly professional admin, absorbs shocks, exceptionally deep bench strength",
+    "WGI 1.0–1.5 · Professional admin, may face capacity constraints, absorbs shocks but slow",
+    "WGI 0.5–1.0 · Generally professional admin, slow when dealing with changing circumstances",
+    "WGI 0.0–0.5 · Capable core but limited depth, struggles to respond to shocks",
+    "WGI -0.5–0.0 · Capable core but limited depth, struggles to respond to shocks",
+    "WGI -1.0– -0.5 · Admin often unable to support policymaking, backlogs accumulate",
+    "WGI -1.5– -1.0 · Admin often unable to support policymaking, significant backlogs",
+    "WGI < -1.5 · Lacks technical skills, weak willingness to pay creditors",
 ]
 
 F2_CIVILJUD_OPTS = [
-    "WGI-RL/CC >1.5 · Predictable law enforcement, independent judiciary, low corruption",
-    "WGI-RL/CC 1.0–1.5 · Predictable enforcement, independent judiciary, low corruption",
-    "WGI-RL/CC 0.5–1.0 · Generally predictable, judiciary not always independent",
-    "WGI-RL/CC 0.0–0.5 · Generally predictable, corruption may be a problem, slow courts",
-    "WGI-RL/CC -0.5–0.0 · Sometimes predictable, judiciary subject to political influence, significant corruption",
-    "WGI-RL/CC -1.0– -0.5 · Sometimes predictable, political influence, significant corruption",
-    "WGI-RL/CC -1.5– -1.0 · Unpredictable, few checks & balances, endemic corruption",
-    "WGI-RL/CC < -1.5 · Unpredictable, no checks & balances, endemic corruption, ineffective courts",
+    "WGI >1.5 · Predictable law enforcement, independent judiciary, low corruption",
+    "WGI 1.0–1.5 · Predictable enforcement, independent judiciary, low corruption",
+    "WGI 0.5–1.0 · Generally predictable, judiciary not always independent",
+    "WGI 0.0–0.5 · Generally predictable, corruption may be a problem, slow courts",
+    "WGI -0.5–0.0 · Sometimes predictable, judiciary subject to political influence, significant corruption",
+    "WGI -1.0– -0.5 · Sometimes predictable, political influence, significant corruption",
+    "WGI -1.5– -1.0 · Unpredictable, few checks & balances, endemic corruption",
+    "WGI < -1.5 · Unpredictable, no checks & balances, endemic corruption, ineffective courts",
 ]
 
 F2_FISCAL_OPTS = [
@@ -474,7 +474,7 @@ def render_moody():
     st.caption("Baseado em: Moody's Sovereign Rating Methodology, Nov/2022")
 
     page = st.selectbox("📌 Section", [
-        "📋 Overview",
+        "📖 Overview",
         "1️⃣ Economic Strength",
         "2️⃣ Institutions & Governance",
         "3️⃣ Fiscal Strength",
@@ -499,41 +499,42 @@ def render_moody():
             st.session_state[k] = v
 
     # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 1 – ECONOMIC STRENGTH
+    # OVERVIEW
     # ═══════════════════════════════════════════════════════════════════
-    if page == "📋 Overview":
-        st.header("📋 Methodology Overview")
+    if page == "📖 Overview":
+        st.header("📖 Methodology Overview")
         st.markdown(
-            "The Moody\u2019s Sovereign Rating Methodology (Nov 2022) combines **four broad factors** "
-            "into a final indicative sovereign rating:\n\n"
-            "1. **Economic Strength** \u2014 quantitative metrics: GDP growth, volatility, nominal GDP, GDP per capita.\n"
-            "2. **Institutions & Governance** \u2014 qualitative assessment of institutional quality and policy effectiveness, "
-            "anchored to World Governance Indicators (WGI).\n"
-            "3. **Fiscal Strength** \u2014 quantitative metrics: debt/GDP, debt/revenue, interest/revenue, interest/GDP, plus adjustments.\n"
-            "4. **Susceptibility to Event Risk (SETR)** \u2014 qualitative/quantitative: political risk, government liquidity, "
-            "banking sector risk, and external vulnerability. The SETR is the **worst** of the 4 sub-factors.\n\n"
-            "Factors 1 and 2 combine into **Economic Resiliency (ER)**. "
-            "ER is combined with Factor 3 via the **GFS matrix** to produce the **Government Financial Strength (GFS)**. "
-            "Finally, GFS is combined with SETR via the **Final matrix** to produce the **Indicative Sovereign Rating**."
+            "This model implements the **Moody's Sovereign Rating Methodology (Nov 2022)**. "
+            "The scorecard comprises **four weighted factors**:\n\n"
+            "1. **Economic Strength** – Growth dynamics, scale of the economy, and national income.\n"
+            "2. **Institutions & Governance Strength** – Quality of institutions and policy effectiveness.\n"
+            "3. **Fiscal Strength** – Debt burden and debt affordability.\n"
+            "4. **Susceptibility to Event Risk** – Political, liquidity, banking, and external risks.\n\n"
+            "Factors 1 and 2 are combined (equal weight) into **Economic Resiliency**. "
+            "Economic Resiliency is then combined with Factor 3 (dynamic weights) to produce "
+            "**Government Financial Strength**. Finally, Factor 4 can only lower the outcome."
         )
         st.markdown("---")
-        st.subheader("WGI \u2013 World Governance Indicators")
-        st.markdown(
-            "Several sub-factors in Factors 2 and 4 are anchored to the **World Bank\u2019s Worldwide Governance Indicators (WGI)**. "
-            "The acronyms used in the dropdown options refer to:\n\n"
-            "| Acronym | Full Name | Used in |\n"
-            "|---|---|---|\n"
-            "| **GE** | Government Effectiveness | Factor 2 \u2013 Quality of Leg. & Exec. Institutions |\n"
-            "| **RL** | Rule of Law | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
-            "| **CC** | Control of Corruption | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
-            "| **VA** | Voice & Accountability | Factor 4 \u2013 Political Risk |\n"
-            "| **PS** | Political Stability & Absence of Violence | Factor 4 \u2013 Political Risk |\n\n"
-            "WGI scores range from approximately **-2.5** (weak) to **+2.5** (strong)."
-        )
 
+        st.subheader("Exhibit 2 – Sovereign Scorecard Overview")
+        st.image("moody_scorecard_overview.png", use_container_width=True)
+        st.markdown("---")
+
+        st.subheader("Exhibit 14 – Assigning Sub-factor and Factor Scores")
+        st.image("moody_subfactor_scores.png", use_container_width=True)
+        st.markdown("---")
+
+        st.subheader("Exhibit 15 – Scoring Scale")
+        st.image("moody_scoring_scale.png", use_container_width=True)
+
+    # ═══════════════════════════════════════════════════════════════════
+    # FACTOR 1 – ECONOMIC STRENGTH
+    # ═══════════════════════════════════════════════════════════════════
     elif page == "1️⃣ Economic Strength":
         st.header("1️⃣ Factor 1 – Economic Strength")
-        st.markdown("Avalia a dinâmica de crescimento, escala e renda nacional da economia.")
+        st.markdown("Evaluates the growth dynamics, scale of the economy, and national income.")
+        with st.expander("📊 Methodology reference – Economic Strength scoring ranges"):
+            st.image("moody_factor1_ranges.png", use_container_width=True)
         st.markdown("---")
         col1, col2 = st.columns(2)
         with col1:
@@ -647,7 +648,9 @@ def render_moody():
     
     elif page == "3️⃣ Fiscal Strength":
         st.header("3️⃣ Factor 3 – Fiscal Strength")
-        st.markdown("Avalia a sustentabilidade fiscal: endividamento e capacidade de pagamento.")
+        st.markdown("Evaluates fiscal sustainability: debt burden and debt affordability.")
+        with st.expander("📊 Methodology reference – Fiscal Strength scoring ranges"):
+            st.image("moody_factor3_ranges.png", use_container_width=True)
         st.markdown("---")
         st.subheader("📊 Indicadores Quantitativos (peso igual: 25% cada)")
         col1, col2 = st.columns(2)
@@ -774,8 +777,8 @@ def render_moody():
     # RESULTADO CONSOLIDADO
     # ═══════════════════════════════════════════════════════════════════
     else:
-        st.header("🏆 Results – Consolidated Scorecard")
-        st.markdown("**Consolidated view of all factors, sub-scores and final rating.**")
+        st.header("🏆 Resultado – Scorecard Consolidado")
+        st.markdown("**Visão consolidada de todos os fatores, sub-scores e rating final.**")
         st.markdown("---")
 
         alpha_opts_lc = [c.lower() for c in ALPHA_CATS]
