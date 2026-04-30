@@ -15,6 +15,54 @@ ALPHA_CATS = ["aaa","aa","a","baa","ba","b","caa","ca"]
 ALPHA_SCORES = {"aaa":1,"aa":3,"a":6,"baa":9,"ba":12,"b":15,"caa":18,"ca":20}
 
 # ═══════════════════════════════════════════════════════════════════════
+# OPÇÕES DESCRITIVAS – FATOR 2 (Institutions & Governance)
+# ═══════════════════════════════════════════════════════════════════════
+
+F2_LEGEXEC_OPTS = [
+    "AAA | WGI >1.5 · Admin altamente profissional, absorve choques, bench strength excepcional",
+    "AA | WGI 1.0–1.5 · Admin profissional, pode ter restrições, absorve choques mas lenta",
+    "A | WGI 0.5–1.0 · Admin geralmente profissional, lenta ao lidar com mudanças",
+    "BAA | WGI 0.0–0.5 · Núcleo capaz mas pouca profundidade, luta p/ responder a choques",
+    "BA | WGI -0.5–0.0 · Núcleo capaz mas pouca profundidade, luta p/ responder a choques",
+    "B | WGI -1.0– -0.5 · Admin frequentemente incapaz, acumula atrasos",
+    "CAA | WGI -1.5– -1.0 · Admin frequentemente incapaz, acumula atrasos significativos",
+    "CA | WGI < -1.5 · Falta habilidades técnicas, fraca disposição a pagar credores",
+]
+
+F2_CIVILJUD_OPTS = [
+    "AAA | WGI >1.5 · Aplicação de leis previsível, judiciário independente, pouca corrupção",
+    "AA | WGI 1.0–1.5 · Aplicação previsível, judiciário independente, pouca corrupção",
+    "A | WGI 0.5–1.0 · Geralmente previsível, judiciário nem sempre independente",
+    "BAA | WGI 0.0–0.5 · Geralmente previsível, corrupção pode ser problema, tribunais lentos",
+    "BA | WGI -0.5–0.0 · Às vezes previsível, judiciário sofre influência política, corrupção significativa",
+    "B | WGI -1.0– -0.5 · Às vezes previsível, influência política, corrupção significativa",
+    "CAA | WGI -1.5– -1.0 · Imprevisível, poucos controles, corrupção endêmica",
+    "CA | WGI < -1.5 · Imprevisível, sem controles, corrupção endêmica, tribunais ineficazes",
+]
+
+F2_FISCAL_OPTS = [
+    "AAA · Dív/PIB estável nos ciclos, orçamento equilibrado/superávit, metas cumpridas",
+    "AA · Dív/PIB sobe em recessão mas cai, déficit pequeno, metas cumpridas",
+    "A · Dív/PIB sobe lentamente, déficit pequeno/estável, metas às vezes não cumpridas",
+    "BAA · Dív/PIB sobe lentamente, déficit, estrutura rígida, metas às vezes não cumpridas",
+    "BA · Dív/PIB sobe materialmente em recessões, déficit, estrutura rígida, metas freq. não cumpridas",
+    "B · Déficits são norma e grandes, estrutura altamente rígida, evasão fiscal alta",
+    "CAA · Dív/PIB sobe insustentavelmente, déficits norma, sem metas fiscais, contas opacas",
+    "CA · Restrições muito significativas na política fiscal, gastos ad hoc, contas opacas",
+]
+
+F2_MONETARY_OPTS = [
+    "AAA · Estabilidade de preços, reformas proativas, BC independente, macroprudencial eficaz",
+    "AA · Geralmente proativo, BC independente e crível, macroprudencial eficaz",
+    "A · Geralmente proativo, BC em geral crível, macroprudencial às vezes falha",
+    "BAA · Reativo/curto-prazista, BC em geral crível, macroprudencial às vezes falha",
+    "BA · Reativo, BC pode não ter ferramentas/consistência, gov. interfere na pol. monetária",
+    "B · Só age sob pressão, BC pode não ter ferramentas, gov. interfere",
+    "CAA · Só age sob pressão, BC ineficaz, sem uso de ferramentas macroprudenciais",
+    "CA · Não endereça desafios de estabilidade, BC ineficaz, sem macroprudencial",
+]
+
+# ═══════════════════════════════════════════════════════════════════════
 # FUNÇÕES AUXILIARES
 # ═══════════════════════════════════════════════════════════════════════
 
@@ -422,8 +470,8 @@ def calc_final(f1, f2, f3, f4):
 # ═══════════════════════════════════════════════════════════════════════════
 
 def render_moody():
-    st.title("🏛️ Moody’s Sovereign Rating Model")
-    st.caption("Baseado em: Moody’s Sovereign Rating Methodology, Nov/2022")
+    st.title("🏛️ Moody's Sovereign Rating Model")
+    st.caption("Baseado em: Moody's Sovereign Rating Methodology, Nov/2022")
 
     page = st.selectbox("📌 Seção", [
         "1️⃣ Economic Strength",
@@ -450,7 +498,7 @@ def render_moody():
             st.session_state[k] = v
 
     # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 1 – ECONOMIC STRENGTH (só inputs)
+    # FACTOR 1 – ECONOMIC STRENGTH
     # ═══════════════════════════════════════════════════════════════════
     if page == "1️⃣ Economic Strength":
         st.header("1️⃣ Factor 1 – Economic Strength")
@@ -501,43 +549,43 @@ def render_moody():
         st.session_state.f1_adj = f1_adj
 
     # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 2 – INSTITUTIONS & GOVERNANCE (só inputs)
+    # FACTOR 2 – INSTITUTIONS & GOVERNANCE (opções descritivas)
     # ═══════════════════════════════════════════════════════════════════
     elif page == "2️⃣ Institutions & Governance":
         st.header("2️⃣ Factor 2 – Institutions & Governance")
         st.markdown("Avalia a qualidade institucional e a eficácia das políticas públicas.")
         st.markdown("---")
-        alpha_opts = [c.upper() for c in ALPHA_CATS]
+
         col1, col2 = st.columns(2)
         with col1:
             f2_le = st.selectbox(
                 "🏛️ Quality of Legislative & Executive Institutions (20%)",
-                options=alpha_opts, index=st.session_state.f2_le,
+                options=F2_LEGEXEC_OPTS, index=st.session_state.f2_le,
                 help="Qualidade das instituições legislativas e executivas",
             )
-            st.session_state.f2_le = alpha_opts.index(f2_le)
+            st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
         with col2:
             f2_cj = st.selectbox(
                 "⚖️ Strength of Civil Society & Judiciary (20%)",
-                options=alpha_opts, index=st.session_state.f2_cj,
+                options=F2_CIVILJUD_OPTS, index=st.session_state.f2_cj,
                 help="Força da sociedade civil e do judiciário",
             )
-            st.session_state.f2_cj = alpha_opts.index(f2_cj)
+            st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
         col3, col4 = st.columns(2)
         with col3:
             f2_fp = st.selectbox(
                 "💰 Fiscal Policy Effectiveness (30%)",
-                options=alpha_opts, index=st.session_state.f2_fp,
+                options=F2_FISCAL_OPTS, index=st.session_state.f2_fp,
                 help="Eficácia da política fiscal",
             )
-            st.session_state.f2_fp = alpha_opts.index(f2_fp)
+            st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
         with col4:
             f2_mp = st.selectbox(
                 "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
-                options=alpha_opts, index=st.session_state.f2_mp,
+                options=F2_MONETARY_OPTS, index=st.session_state.f2_mp,
                 help="Eficácia da política monetária e macroeconômica",
             )
-            st.session_state.f2_mp = alpha_opts.index(f2_mp)
+            st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
         st.markdown("---")
         col5, col6 = st.columns(2)
         with col5:
@@ -558,7 +606,7 @@ def render_moody():
             st.session_state.f2_ao = f2_ao
 
     # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 3 – FISCAL STRENGTH (só inputs)
+    # FACTOR 3 – FISCAL STRENGTH
     # ═══════════════════════════════════════════════════════════════════
     elif page == "3️⃣ Fiscal Strength":
         st.header("3️⃣ Factor 3 – Fiscal Strength")
@@ -624,7 +672,7 @@ def render_moody():
             st.session_state.f3_adj = f3_adj
 
     # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK (só inputs)
+    # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
     # ═══════════════════════════════════════════════════════════════════
     elif page == "4️⃣ Susceptibility to Event Risk":
         st.header("4️⃣ Factor 4 – Susceptibility to Event Risk")
@@ -860,6 +908,6 @@ def render_moody():
 
         st.markdown("---")
         st.caption(
-            "⚠️ Este modelo é uma reprodução didática da metodologia Moody’s (Nov/2022). "
+            "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
             "Os resultados são indicativos e não substituem a análise oficial da agência."
         )
