@@ -521,7 +521,6 @@ def calc_final(f1, f2, f3, f4):
 # ═════════════════════════════════════════════════════════════
 
 def parse_credit_opinion(pdf_bytes):
-    """Parse a Moody's Credit Opinion PDF and extract scorecard values."""
     try:
         import fitz
     except ImportError:
@@ -533,22 +532,22 @@ def parse_credit_opinion(pdf_bytes):
     scorecard_text = None
     for page in doc:
         text = page.get_text()
-        if "Factor 1: Economic strength" in text or "Factor / Sub-Factor" in text:
-            scorecard_text = text.replace('\n', ' ')
+        if "Factor 1" in text and "Economic strength" in text:
+            scorecard_text = text.replace("\n", " ")
             break
     doc.close()
     if not scorecard_text:
         return None
     result = {}
     t = scorecard_text
-    def _float(pat):
-        m = re.search(pat, t)
+    def _f(pat):
+        m = re.search(pat, t, re.IGNORECASE)
         if m:
             try: return float(m.group(1).replace(",", ""))
             except: pass
         return None
-    def _int(pat):
-        m = re.search(pat, t)
+    def _i(pat):
+        m = re.search(pat, t, re.IGNORECASE)
         if m:
             try: return int(m.group(1))
             except: pass
@@ -557,82 +556,78 @@ def parse_credit_opinion(pdf_bytes):
     SCALE21 = ["aaa","aa1","aa2","aa3","a1","a2","a3",
                 "baa1","baa2","baa3","ba1","ba2","ba3",
                 "b1","b2","b3","caa1","caa2","caa3","ca"]
-    def _alpha8(pat):
+    def _a8(pat):
         m = re.search(pat, t, re.IGNORECASE)
         if m:
             v = m.group(1).lower().strip()
             if v in CATS8: return CATS8.index(v)
         return None
-    def _alpha21(pat):
+    def _a21(pat):
         m = re.search(pat, t, re.IGNORECASE)
         if m:
             v = m.group(1).lower().strip()
             if v in SCALE21: return SCALE21.index(v)
         return None
-    # F1
-    v = _float(r"Average real GDP growth.*?([\d.,]+)\s"); 
-    if v is not None: result["f1_gdp"] = v
-    v = _float(r"MAD Volatility.*?([\d.,]+)\s");
-    if v is not None: result["f1_mad"] = v
-    v = _float(r"Nominal GDP.*?([\d.,]+)\s");
-    if v is not None: result["f1_nom"] = v
-    v = _float(r"GDP per capita.*?([\d.,]+)\s");
-    if v is not None: result["f1_pc"] = v
-    v = _int(r"Adjustment to factor 1.*?([\-\d]+)\s+max");
-    if v is not None: result["f1_adj"] = v
-    # F2
-    v = _alpha8(r"Quality of legislative and executive institutions\s+(\w+)")
-    if v is not None: result["f2_le"] = v
-    v = _alpha8(r"Strength of civil society and the judiciary\s+(\w+)")
-    if v is not None: result["f2_cj"] = v
-    v = _alpha8(r"Fiscal policy effectiveness\s+(\w+)")
-    if v is not None: result["f2_fp"] = v
-    v = _alpha8(r"Monetary and macroeconomic policy effectiveness\s+(\w+)")
-    if v is not None: result["f2_mp"] = v
-    v = _int(r"Government default history.*?([\-\d]+)\s+max")
-    if v is not None: result["f2_dh"] = v
-    v = _int(r"Other adjustment to factor 2.*?([\-\d]+)\s+max")
-    if v is not None: result["f2_ao"] = v
-    # F3
-    v = _float(r"General government debt/GDP.*?([\d.,]+)\s")
-    if v is not None: result["f3_gg"] = v
-    v = _float(r"General government debt/revenue.*?([\d.,]+)\s")
-    if v is not None: result["f3_gr"] = v
-    v = _float(r"General government interest payments/revenue.*?([\d.,]+)\s")
-    if v is not None: result["f3_ir"] = v
-    v = _float(r"General government interest payments/GDP.*?([\d.,]+)\s")
-    if v is not None: result["f3_ig"] = v
-    v = _float(r"Historical Change in Debt Burden.*?([\d.,]+)")
-    if v is not None: result["f3_hc"] = v
-    v = _float(r"Expected Change in Debt Burden.*?([\d.,]+)")
-    if v is not None: result["f3_ec"] = v
-    v = _float(r"Foreign Currency Debt.*?GDP.*?([\d.,]+)")
-    if v is not None: result["f3_fc"] = v
-    v = _float(r"Other non-financial public sector debt.*?([\d.,]+)")
-    if v is not None: result["f3_op"] = v
-    v = _float(r"Government Financial Assets.*?GDP.*?([\d.,]+)")
-    if v is not None: result["f3_ga"] = v
-    v = _int(r"Other adjustment to factor 3.*?([\-\d]+)\s+max")
-    if v is not None: result["f3_adj"] = v
-    # F4
-    v = _alpha8(r"Domestic political risk and geopolitical risk\s+(\w+)")
-    if v is not None: result["f4_pol"] = v
-    v = _alpha8(r"Ease of access to funding\s+(\w+)")
-    if v is not None: result["f4_ease"] = v
-    v = _int(r"High refinancing risk\s+([\-\d]+)")
-    if v is not None: result["f4_refin"] = v
-    v = _alpha21(r"Risk of banking sector credit event.*?([a-z]+\d*)\s+[a-z]")
-    if v is not None: result["f4_bsce"] = v
-    v = _float(r"Total domestic bank assets/GDP.*?([\d.,]+)")
-    if v is not None: result["f4_ba"] = v
-    v = _int(r"Adjustment to F4 BSR.*?([\-\d]+)\s+max")
-    if v is not None: result["f4_badj"] = v
-    v = _alpha8(r"External vulnerability risk\s+(\w+)")
-    if v is not None: result["f4_ext"] = v
-    v = _int(r"Adjustment to F4 EVR.*?([\-\d]+)\s+max")
-    if v is not None: result["f4_eadj"] = v
-    v = _int(r"Overall adjustment to F4.*?([\-\d]+)\s+max")
-    if v is not None: result["f4_oth"] = v
+    v=_f(r"Average real GDP growth \(%\)\s+\S+\s+([\d.]+)")
+    if v is not None: result["f1_gdp"]=v
+    v=_f(r"MAD Volatility in Real GDP Growth \(%\)\s+\S+\s+([\d.]+)")
+    if v is not None: result["f1_mad"]=v
+    v=_f(r"Nominal GDP \(\$ billion\)\s+\d{4}\s+([\d,.]+)")
+    if v is not None: result["f1_nom"]=v
+    v=_f(r"GDP per capita \(PPP, Intl\$\)\s+\d{4}\s+([\d,.]+)")
+    if v is not None: result["f1_pc"]=v
+    v=_i(r"Adjustment to factor 1\s+# notches\s+(-?\d+)")
+    if v is not None: result["f1_adj"]=v
+    v=_a8(r"Quality of legislative and executive institutions\s+(\w+)")
+    if v is not None: result["f2_le"]=v
+    v=_a8(r"Strength of civil society and the judiciary\s+(\w+)")
+    if v is not None: result["f2_cj"]=v
+    v=_a8(r"Fiscal policy effectiveness\s+(\w+)")
+    if v is not None: result["f2_fp"]=v
+    v=_a8(r"Monetary and macroeconomic policy effectiveness\s+(\w+)")
+    if v is not None: result["f2_mp"]=v
+    v=_i(r"Government default history and track record of arrears\s+(-?\d+)")
+    if v is not None: result["f2_dh"]=v
+    v=_i(r"Other adjustment to factor 2\s+# notches\s+(-?\d+)")
+    if v is not None: result["f2_ao"]=v
+    v=_f(r"General government debt/GDP \(%\)\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_gg"]=v
+    v=_f(r"General government debt/revenue \(%?\)?\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_gr"]=v
+    v=_f(r"General government interest payments/revenue \(%\)\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_ir"]=v
+    v=_f(r"General government interest payments/GDP \(%?\)?\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_ig"]=v
+    v=_f(r"Historical Change in Debt Burden\s+[\d-]+\s+([\d.]+)")
+    if v is not None: result["f3_hc"]=v
+    v=_f(r"Expected Change in Debt Burden\s+[\dF-]+\s+([\d.]+)")
+    if v is not None: result["f3_ec"]=v
+    v=_f(r"Foreign Currency Debt/\s*GDP\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_fc"]=v
+    v=_f(r"Other non-financial public sector debt/GDP\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_op"]=v
+    v=_f(r"Government Financial Assets.*?GDP\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f3_ga"]=v
+    v=_i(r"Other adjustment to factor 3\s+# notches\s+(-?\d+)")
+    if v is not None: result["f3_adj"]=v
+    v=_a8(r"Domestic political risk and geopolitical risk\s+(\w+)")
+    if v is not None: result["f4_pol"]=v
+    v=_a8(r"Ease of access to funding\s+(\w+)")
+    if v is not None: result["f4_ease"]=v
+    v=_i(r"High refinancing risk\s+(-?\d+)")
+    if v is not None: result["f4_refin"]=v
+    v=_a21(r"credit event \(BSCE\).*?available\s+(\w+)")
+    if v is not None: result["f4_bsce"]=v
+    v=_f(r"Total domestic bank assets/GDP\s+\d{4}\s+([\d.]+)")
+    if v is not None: result["f4_ba"]=v
+    v=_i(r"Adjustment to F4 BSR\s+# notches\s+(-?\d+)")
+    if v is not None: result["f4_badj"]=v
+    v=_a8(r"External vulnerability risk\s+(\w+)\s+\w+\s+External")
+    if v is not None: result["f4_ext"]=v
+    v=_i(r"Adjustment to F4 EVR\s+# notches\s+(-?\d+)")
+    if v is not None: result["f4_eadj"]=v
+    v=_i(r"Overall adjustment to F4\s+# notches\s+(-?\d+)")
+    if v is not None: result["f4_oth"]=v
     return result if result else None
 
 
@@ -667,7 +662,7 @@ def render_moody():
 
     # ── Upload Credit Opinion PDF ──
     st.sidebar.markdown("---")
-    st.sidebar.subheader("📄 Import Credit Opinion")
+    st.sidebar.subheader("\U0001f4c4 Import Credit Opinion")
     uploaded_pdf = st.sidebar.file_uploader(
         "Upload a Moody\'s Credit Opinion PDF",
         type=["pdf"], key="moody_credit_opinion_upload",
@@ -680,9 +675,9 @@ def render_moody():
                 for k, v in parsed.items():
                     st.session_state[k] = v
                 st.session_state["_last_pdf_hash"] = pdf_hash
-                st.sidebar.success(f"✅ {len(parsed)} fields imported!")
+                st.sidebar.success(f"\u2705 {len(parsed)} fields imported!")
             else:
-                st.sidebar.warning("⚠️ Could not extract scorecard.")
+                st.sidebar.warning("\u26a0\ufe0f Could not extract scorecard.")
                 st.session_state["_last_pdf_hash"] = pdf_hash
 
 
@@ -795,7 +790,7 @@ def render_moody():
         st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
         _cat = ALPHA_CATS[st.session_state.f2_le]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("📊 Ver tabela da metodologia – Quality of Legislative & Executive Institutions (PDF)"):
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Quality of Legislative & Executive Institutions (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f2_legexec.png"), use_container_width=True)
 
         f2_cj = st.selectbox(
@@ -806,7 +801,7 @@ def render_moody():
         st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
         _cat = ALPHA_CATS[st.session_state.f2_cj]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("📊 Ver tabela da metodologia – Strength of Civil Society & Judiciary (PDF)"):
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Strength of Civil Society & Judiciary (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f2_civiljud.png"), use_container_width=True)
 
         st.markdown("---")
@@ -819,7 +814,7 @@ def render_moody():
         st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
         _cat = ALPHA_CATS[st.session_state.f2_fp]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("📊 Ver tabela da metodologia – Fiscal Policy Effectiveness (PDF)"):
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Fiscal Policy Effectiveness (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f2_fiscal.png"), use_container_width=True)
 
         f2_mp = st.selectbox(
@@ -830,7 +825,7 @@ def render_moody():
         st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
         _cat = ALPHA_CATS[st.session_state.f2_mp]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("📊 Ver tabela da metodologia – Monetary & Macroeconomic Policy Effectiveness (PDF)"):
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Monetary & Macroeconomic Policy Effectiveness (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f2_monetary.png"), use_container_width=True)
 
         st.markdown("---")
@@ -921,65 +916,53 @@ def render_moody():
     # ═══════════════════════════════════════════════════════════════════
     # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
     # ═══════════════════════════════════════════════════════════════════
-    elif page == "4️⃣ Susceptibility to Event Risk":
-        st.header("4️⃣ Factor 4 – Susceptibility to Event Risk")
-        st.markdown("Avalia os riscos de eventos: político, liquidez, bancário e externo. "
-                    "O SETR é determinado pelo **pior** (maior score) dos 4 sub-fatores.")
-        st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
+    elif page == "4\ufe0f\u20e3 Susceptibility to Event Risk":
+        st.header("4\ufe0f\u20e3 Factor 4 \u2013 Susceptibility to Event Risk")
+        st.markdown("Avalia os riscos de eventos: pol\u00edtico, liquidez, banc\u00e1rio e externo. "
+                    "O SETR \u00e9 determinado pelo **pior** (maior score) dos 4 sub-fatores.")
         st.markdown("---")
 
-        st.subheader("🗳️ Political Risk")
-        f4_pol_sel = st.selectbox(
-            "🗳️ Domestic Political and Geopolitical Risk",
+        st.subheader("\U0001f5f3\ufe0f Political Risk")
+        f4_pol_sel = st.selectbox("\U0001f5f3\ufe0f Domestic Political and Geopolitical Risk",
             options=F4_POLITICAL_OPTS, index=st.session_state.f4_pol,
-            help="Risco político doméstico e geopolítico (pp. 16-17)",
-        )
+            help="Risco pol\u00edtico dom\u00e9stico e geopol\u00edtico")
         st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
         _cat = ALPHA_CATS[st.session_state.f4_pol]
-        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("📊 Ver tabela da metodologia – Political Risk (PDF)"):
+        st.markdown(f"\u2192 **{_cat.upper()}** \u00b7 score {ALPHA_SCORES[_cat]}")
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Political Risk (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f4_political.png"), use_container_width=True)
         st.markdown("---")
 
-        st.subheader("💰 Government Liquidity Risk")
-        f4_ease_sel = st.selectbox(
-            "💰 Ease of Access to Funding",
-            options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease,
-            help="Facilidade de acesso a financiamento (pp. 18)",
-        )
+        st.subheader("\U0001f4b0 Government Liquidity Risk")
+        f4_ease_sel = st.selectbox("\U0001f4b0 Ease of Access to Funding",
+            options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease)
         st.session_state.f4_ease = F4_GOVLIQ_OPTS.index(f4_ease_sel)
         _cat_ease = ALPHA_CATS[st.session_state.f4_ease]
-        st.markdown(f"→ Ease of Access: **{_cat_ease.upper()}** · score {ALPHA_SCORES[_cat_ease]}")
+        st.markdown(f"\u2192 Ease of Access: **{_cat_ease.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ease]}")
         refin_opts = [0, 1, 2]
-        f4_refin = st.selectbox("⬇️ High Refinancing Risk Adj (scoring categories ↓)", options=refin_opts,
-            index=refin_opts.index(st.session_state.f4_refin),
-            help="Ajuste por alto risco de refinanciamento (0 = sem ajuste, 2 = máx.)")
+        f4_refin = st.selectbox("\u2b07\ufe0f High Refinancing Risk Adj", options=refin_opts,
+            index=refin_opts.index(st.session_state.f4_refin))
         st.session_state.f4_refin = f4_refin
         _ease_score = ALPHA_SCORES[_cat_ease]
         _liq_score = clamp_score(_ease_score + st.session_state.f4_refin)
         _liq_alpha = score_to_broad(_liq_score)
-        st.markdown(f"→ Gov Liquidity Risk (adjusted): **{_liq_alpha.upper()}** · score {round(_liq_score, 1)}")
-        with st.expander("📊 Ver tabela da metodologia – Government Liquidity Risk (PDF)"):
+        st.markdown(f"\u2192 Gov Liquidity (adjusted): **{_liq_alpha.upper()}** \u00b7 score {round(_liq_score,1)}")
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Government Liquidity Risk (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f4_govliq.png"), use_container_width=True)
         st.markdown("---")
 
-        st.subheader("🏦 Banking Sector Risk")
+        st.subheader("\U0001f3e6 Banking Sector Risk")
         alpha21_opts = [r.upper() for r in RATING_SCALE]
         col3, col4 = st.columns(2)
         with col3:
-            f4_bsce = st.selectbox("BSCE (Risk of Banking Sector Credit Event)", options=alpha21_opts,
-                index=st.session_state.f4_bsce,
-                help="Probabilidade de evento de crédito sistêmico bancário (pp. 43-44)")
+            f4_bsce = st.selectbox("BSCE", options=alpha21_opts, index=st.session_state.f4_bsce)
             st.session_state.f4_bsce = alpha21_opts.index(f4_bsce)
         with col4:
-            f4_ba = st.number_input("Total Bank Assets / GDP (%)", value=st.session_state.f4_ba,
-                min_value=0.0, max_value=1500.0, step=0.1, format="%.1f",
-                help="Ativos totais do sistema bancário doméstico / PIB (pp. 44)")
+            f4_ba = st.number_input("Bank Assets/GDP (%)", value=st.session_state.f4_ba,
+                min_value=0.0, max_value=1500.0, step=0.1, format="%.1f")
             st.session_state.f4_ba = f4_ba
         ba_opts = list(range(-2, 3))
-        f4_badj = st.selectbox("🔧 Banking Sector Risk Adj (scoring categories)", options=ba_opts,
-            index=ba_opts.index(st.session_state.f4_badj),
-            help="Ajuste do risco bancário (-2 a +2 scoring categories, pp. 45)")
+        f4_badj = st.selectbox("\U0001f527 BSR Adj", options=ba_opts, index=ba_opts.index(st.session_state.f4_badj))
         st.session_state.f4_badj = f4_badj
         _bsce_r = RATING_SCALE[st.session_state.f4_bsce]
         _col_idx = bsce_to_col(_bsce_r)
@@ -988,37 +971,31 @@ def render_moody():
         _bsr_score = broad_to_score(_bsr_alpha)
         _bsr_final = clamp_score(_bsr_score + st.session_state.f4_badj)
         _bsr_final_alpha = score_to_broad(_bsr_final)
-        st.markdown(f"→ Banking Sector Risk (matrix + adj): **{_bsr_final_alpha.upper()}** · score {round(_bsr_final, 1)}")
-        with st.expander("📊 Ver tabela da metodologia – Banking Sector Risk (PDF)"):
+        st.markdown(f"\u2192 BSR (matrix+adj): **{_bsr_final_alpha.upper()}** \u00b7 score {round(_bsr_final,1)}")
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Banking Sector Risk (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f4_banking.png"), use_container_width=True)
         st.markdown("---")
 
-        st.subheader("🌐 External Vulnerability Risk")
-        f4_ext_sel = st.selectbox(
-            "🌐 External Vulnerability Risk",
-            options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext,
-            help="Risco de vulnerabilidade externa (pp. 20, 46-47)",
-        )
+        st.subheader("\U0001f310 External Vulnerability Risk")
+        f4_ext_sel = st.selectbox("\U0001f310 External Vulnerability Risk",
+            options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext)
         st.session_state.f4_ext = F4_EXTVULN_OPTS.index(f4_ext_sel)
         _cat_ext = ALPHA_CATS[st.session_state.f4_ext]
-        st.markdown(f"→ Ext. Vulnerability: **{_cat_ext.upper()}** · score {ALPHA_SCORES[_cat_ext]}")
+        st.markdown(f"\u2192 Ext. Vulnerability: **{_cat_ext.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ext]}")
         ext_opts = list(range(-2, 3))
-        f4_eadj = st.selectbox("🔧 Ext. Vulnerability Adj (scoring categories)", options=ext_opts,
-            index=ext_opts.index(st.session_state.f4_eadj),
-            help="Ajuste de vulnerabilidade externa (-2 a +2 scoring categories, pp. 48)")
+        f4_eadj = st.selectbox("\U0001f527 EVR Adj", options=ext_opts, index=ext_opts.index(st.session_state.f4_eadj))
         st.session_state.f4_eadj = f4_eadj
         _ext_score = ALPHA_SCORES[_cat_ext]
         _ext_final = clamp_score(_ext_score + st.session_state.f4_eadj)
         _ext_final_alpha = score_to_broad(_ext_final)
-        st.markdown(f"→ Ext. Vulnerability (adjusted): **{_ext_final_alpha.upper()}** · score {round(_ext_final, 1)}")
-        with st.expander("📊 Ver tabela da metodologia – External Vulnerability Risk (PDF)"):
+        st.markdown(f"\u2192 Ext. Vulnerability (adj): **{_ext_final_alpha.upper()}** \u00b7 score {round(_ext_final,1)}")
+        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 External Vulnerability Risk (PDF)"):
             st.image(str(ASSETS_DIR / "moody_f4_extvuln.png"), use_container_width=True)
         st.markdown("---")
 
         oth_opts = [0, -1, -2]
-        f4_oth = st.selectbox("🔧 Factor 4 Adj – Outros (scoring categories ↓)", options=oth_opts,
-            index=oth_opts.index(st.session_state.f4_oth),
-            help="Ajuste adicional ao fator 4 (0 a -2 scoring categories)")
+        f4_oth = st.selectbox("\U0001f527 Factor 4 Adj \u2013 Outros", options=oth_opts,
+            index=oth_opts.index(st.session_state.f4_oth))
         st.session_state.f4_oth = f4_oth
 
     # ═══════════════════════════════════════════════════════════════════
@@ -1199,3 +1176,4 @@ def render_moody():
             "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
             "Os resultados são indicativos e não substituem a análise oficial da agência."
         )
+
