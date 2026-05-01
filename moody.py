@@ -767,64 +767,111 @@ def render_moody():
     # ═══════════════════════════════════════════════════════════════════
     # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
     # ═══════════════════════════════════════════════════════════════════
-    elif page == "4️⃣ Susceptibility to Event Risk":
+        elif page == "4️⃣ Susceptibility to Event Risk":
         st.header("4️⃣ Factor 4 – Susceptibility to Event Risk")
         st.markdown("Avalia os riscos de eventos: político, liquidez, bancário e externo. "
                     "O SETR é determinado pelo **pior** (maior score) dos 4 sub-fatores.")
         st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
         st.markdown("---")
-        alpha_opts = [c.upper() for c in ALPHA_CATS]
-        alpha21_opts = [r.upper() for r in RATING_SCALE]
+
+        # ── Political Risk ──────────────────────
         st.subheader("🗳️ Political Risk")
-        f4_pol = st.selectbox("Domestic Political Risk", options=alpha_opts,
-            index=st.session_state.f4_pol, help="Risco político doméstico (AAA = menor risco)")
-        st.session_state.f4_pol = alpha_opts.index(f4_pol)
+        f4_pol_sel = st.selectbox(
+            "🗳️ Domestic Political and Geopolitical Risk",
+            options=F4_POLITICAL_OPTS, index=st.session_state.f4_pol,
+            help="Risco político doméstico e geopolítico (pp. 16-17)",
+        )
+        st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
+        _cat = ALPHA_CATS[st.session_state.f4_pol]
+        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+
         st.markdown("---")
+
+        # ── Government Liquidity Risk ────────────
         st.subheader("💰 Government Liquidity Risk")
-        col1, col2 = st.columns(2)
-        with col1:
-            f4_ease = st.selectbox("Ease of Access to Funding", options=alpha_opts,
-                index=st.session_state.f4_ease, help="Facilidade de acesso a financiamento (AAA = melhor)")
-            st.session_state.f4_ease = alpha_opts.index(f4_ease)
-        with col2:
-            refin_opts = [0, 1, 2]
-            f4_refin = st.selectbox("High Refinancing Risk Adj (notches ↓)", options=refin_opts,
-                index=refin_opts.index(st.session_state.f4_refin),
-                help="Ajuste por alto risco de refinanciamento (0 = sem ajuste, 2 = máx.)")
-            st.session_state.f4_refin = f4_refin
+        f4_ease_sel = st.selectbox(
+            "💰 Ease of Access to Funding",
+            options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease,
+            help="Facilidade de acesso a financiamento (pp. 18)",
+        )
+        st.session_state.f4_ease = F4_GOVLIQ_OPTS.index(f4_ease_sel)
+        _cat_ease = ALPHA_CATS[st.session_state.f4_ease]
+        st.markdown(f"→ Ease of Access: **{_cat_ease.upper()}** · score {ALPHA_SCORES[_cat_ease]}")
+
+        refin_opts = [0, 1, 2]
+        f4_refin = st.selectbox("⬇️ High Refinancing Risk Adj (scoring categories ↓)", options=refin_opts,
+            index=refin_opts.index(st.session_state.f4_refin),
+            help="Ajuste por alto risco de refinanciamento (0 = sem ajuste, 2 = máx.)")
+        st.session_state.f4_refin = f4_refin
+
+        _ease_score = ALPHA_SCORES[_cat_ease]
+        _liq_score = clamp_score(_ease_score + st.session_state.f4_refin)
+        _liq_alpha = score_to_broad(_liq_score)
+        st.markdown(f"→ Gov Liquidity Risk (adjusted): **{_liq_alpha.upper()}** · score {round(_liq_score, 1)}")
+
         st.markdown("---")
+
+        # ── Banking Sector Risk ──────────────────
         st.subheader("🏦 Banking Sector Risk")
-        col3, col4, col5 = st.columns(3)
+        alpha21_opts = [r.upper() for r in RATING_SCALE]
+        col3, col4 = st.columns(2)
         with col3:
-            f4_bsce = st.selectbox("BSCE (Bank System Credit Event)", options=alpha21_opts,
-                index=st.session_state.f4_bsce, help="Probabilidade de evento de crédito sistêmico bancário")
+            f4_bsce = st.selectbox("BSCE (Risk of Banking Sector Credit Event)", options=alpha21_opts,
+                index=st.session_state.f4_bsce,
+                help="Probabilidade de evento de crédito sistêmico bancário (pp. 43-44)")
             st.session_state.f4_bsce = alpha21_opts.index(f4_bsce)
         with col4:
             f4_ba = st.number_input("Total Bank Assets / GDP (%)", value=st.session_state.f4_ba,
                 min_value=0.0, max_value=1500.0, step=0.1, format="%.1f",
-                help="Ativos totais do sistema bancário / PIB")
+                help="Ativos totais do sistema bancário doméstico / PIB (pp. 44)")
             st.session_state.f4_ba = f4_ba
-        with col5:
-            ba_opts = list(range(-2, 3))
-            f4_badj = st.selectbox("Banking Sector Adj (notches)", options=ba_opts,
-                index=ba_opts.index(st.session_state.f4_badj), help="Ajuste do risco bancário (-2 a +2)")
-            st.session_state.f4_badj = f4_badj
+
+        ba_opts = list(range(-2, 3))
+        f4_badj = st.selectbox("🔧 Banking Sector Risk Adj (scoring categories)", options=ba_opts,
+            index=ba_opts.index(st.session_state.f4_badj),
+            help="Ajuste do risco bancário (-2 a +2 scoring categories, pp. 45)")
+        st.session_state.f4_badj = f4_badj
+
+        _bsce_r = RATING_SCALE[st.session_state.f4_bsce]
+        _col_idx = bsce_to_col(_bsce_r)
+        _row_idx = bank_assets_to_row(st.session_state.f4_ba)
+        _bsr_alpha = BSR_MATRIX[_row_idx][_col_idx]
+        _bsr_score = broad_to_score(_bsr_alpha)
+        _bsr_final = clamp_score(_bsr_score + st.session_state.f4_badj)
+        _bsr_final_alpha = score_to_broad(_bsr_final)
+        st.markdown(f"→ Banking Sector Risk (matrix + adj): **{_bsr_final_alpha.upper()}** · score {round(_bsr_final, 1)}")
+
         st.markdown("---")
+
+        # ── External Vulnerability Risk ────────────
         st.subheader("🌐 External Vulnerability Risk")
-        col6, col7 = st.columns(2)
-        with col6:
-            f4_ext = st.selectbox("External Vulnerability Risk", options=alpha_opts,
-                index=st.session_state.f4_ext, help="Risco de vulnerabilidade externa (AAA = menor risco)")
-            st.session_state.f4_ext = alpha_opts.index(f4_ext)
-        with col7:
-            ext_opts = list(range(-2, 3))
-            f4_eadj = st.selectbox("Ext. Vulnerability Adj (notches)", options=ext_opts,
-                index=ext_opts.index(st.session_state.f4_eadj), help="Ajuste de vulnerabilidade externa (-2 a +2)")
-            st.session_state.f4_eadj = f4_eadj
+        f4_ext_sel = st.selectbox(
+            "🌐 External Vulnerability Risk",
+            options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext,
+            help="Risco de vulnerabilidade externa (pp. 20, 46-47)",
+        )
+        st.session_state.f4_ext = F4_EXTVULN_OPTS.index(f4_ext_sel)
+        _cat_ext = ALPHA_CATS[st.session_state.f4_ext]
+        st.markdown(f"→ Ext. Vulnerability: **{_cat_ext.upper()}** · score {ALPHA_SCORES[_cat_ext]}")
+
+        ext_opts = list(range(-2, 3))
+        f4_eadj = st.selectbox("🔧 Ext. Vulnerability Adj (scoring categories)", options=ext_opts,
+            index=ext_opts.index(st.session_state.f4_eadj),
+            help="Ajuste de vulnerabilidade externa (-2 a +2 scoring categories, pp. 48)")
+        st.session_state.f4_eadj = f4_eadj
+
+        _ext_score = ALPHA_SCORES[_cat_ext]
+        _ext_final = clamp_score(_ext_score + st.session_state.f4_eadj)
+        _ext_final_alpha = score_to_broad(_ext_final)
+        st.markdown(f"→ Ext. Vulnerability (adjusted): **{_ext_final_alpha.upper()}** · score {round(_ext_final, 1)}")
+
         st.markdown("---")
+
+        # ── Factor 4 Overall Adjustment ────────────
         oth_opts = [0, -1, -2]
-        f4_oth = st.selectbox("🔧 Factor 4 Adj – Outros (notches ↓)", options=oth_opts,
-            index=oth_opts.index(st.session_state.f4_oth), help="Ajuste adicional de 0 a -2")
+        f4_oth = st.selectbox("🔧 Factor 4 Adj – Outros (scoring categories ↓)", options=oth_opts,
+            index=oth_opts.index(st.session_state.f4_oth),
+            help="Ajuste adicional ao fator 4 (0 a -2 scoring categories)")
         st.session_state.f4_oth = f4_oth
 
     # ═══════════════════════════════════════════════════════════════════
