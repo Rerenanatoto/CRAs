@@ -640,8 +640,6 @@ def render_moody():
         st.caption("WGI: **GE** = Government Effectiveness · **RL** = Rule of Law · **CC** = Control of Corruption")
         st.markdown("---")
         _dir = os.path.dirname(os.path.abspath(__file__))
-        with st.expander("📊 Methodology reference – Institutions & Governance scoring descriptions (pp. 8-14)"):
-            st.image(os.path.join(_dir, "moody_factor2_descriptions.png"), use_container_width=True)
 
         f2_le = st.selectbox(
             "🏛️ Quality of Legislative & Executive Institutions (20%)",
@@ -651,6 +649,8 @@ def render_moody():
         st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
         _cat = ALPHA_CATS[st.session_state.f2_le]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        with st.expander("📊 Ver tabela da metodologia – Quality of Legislative & Executive Institutions (PDF)"):
+            st.image(os.path.join(_dir, "moody_f2_legexec.png"), use_container_width=True)
 
         f2_cj = st.selectbox(
             "⚖️ Strength of Civil Society & Judiciary (20%)",
@@ -660,6 +660,8 @@ def render_moody():
         st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
         _cat = ALPHA_CATS[st.session_state.f2_cj]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        with st.expander("📊 Ver tabela da metodologia – Strength of Civil Society & Judiciary (PDF)"):
+            st.image(os.path.join(_dir, "moody_f2_civiljud.png"), use_container_width=True)
 
         st.markdown("---")
 
@@ -671,6 +673,8 @@ def render_moody():
         st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
         _cat = ALPHA_CATS[st.session_state.f2_fp]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        with st.expander("📊 Ver tabela da metodologia – Fiscal Policy Effectiveness (PDF)"):
+            st.image(os.path.join(_dir, "moody_f2_fiscal.png"), use_container_width=True)
 
         f2_mp = st.selectbox(
             "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
@@ -680,6 +684,8 @@ def render_moody():
         st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
         _cat = ALPHA_CATS[st.session_state.f2_mp]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        with st.expander("📊 Ver tabela da metodologia – Monetary & Macroeconomic Policy Effectiveness (PDF)"):
+            st.image(os.path.join(_dir, "moody_f2_monetary.png"), use_container_width=True)
 
         st.markdown("---")
         col5, col6 = st.columns(2)
@@ -778,8 +784,6 @@ def render_moody():
         st.markdown("---")
 
         _dir = os.path.dirname(os.path.abspath(__file__))
-        with st.expander("📊 Methodology reference – Susceptibility to Event Risk scoring descriptions (pp. 16-20)"):
-            st.image(os.path.join(_dir, "moody_factor4_descriptions.png"), use_container_width=True)
 
         # ── Political Risk ──
         st.subheader("🗳️ Political Risk")
@@ -791,6 +795,8 @@ def render_moody():
         st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
         _cat = ALPHA_CATS[st.session_state.f4_pol]
         st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+        with st.expander("📊 Ver tabela da metodologia – Domestic Political & Geopolitical Risk (PDF)"):
+            st.image(os.path.join(_dir, "moody_f4_political.png"), use_container_width=True)
 
         st.markdown("---")
 
@@ -815,6 +821,8 @@ def render_moody():
         _liq_score = clamp_score(_ease_score + st.session_state.f4_refin)
         _liq_alpha = score_to_broad(_liq_score)
         st.markdown(f"→ Gov Liquidity Risk (adjusted): **{_liq_alpha.upper()}** · score {round(_liq_score, 1)}")
+        with st.expander("📊 Ver tabela da metodologia – Ease of Access to Funding / Gov Liquidity (PDF)"):
+            st.image(os.path.join(_dir, "moody_f4_govliq.png"), use_container_width=True)
 
         st.markdown("---")
 
@@ -847,6 +855,8 @@ def render_moody():
         _bsr_final = clamp_score(_bsr_score + st.session_state.f4_badj)
         _bsr_final_alpha = score_to_broad(_bsr_final)
         st.markdown(f"→ Banking Sector Risk (matrix + adj): **{_bsr_final_alpha.upper()}** · score {round(_bsr_final, 1)}")
+        with st.expander("📊 Ver tabela da metodologia – Banking Sector Risk / BSCE (PDF)"):
+            st.image(os.path.join(_dir, "moody_f4_banking.png"), use_container_width=True)
 
         st.markdown("---")
 
@@ -871,6 +881,8 @@ def render_moody():
         _ext_final = clamp_score(_ext_score + st.session_state.f4_eadj)
         _ext_final_alpha = score_to_broad(_ext_final)
         st.markdown(f"→ Ext. Vulnerability (adjusted): **{_ext_final_alpha.upper()}** · score {round(_ext_final, 1)}")
+        with st.expander("📊 Ver tabela da metodologia – External Vulnerability Risk (PDF)"):
+            st.image(os.path.join(_dir, "moody_f4_extvuln.png"), use_container_width=True)
 
         st.markdown("---")
 
