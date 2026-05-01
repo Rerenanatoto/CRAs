@@ -534,7 +534,7 @@ def parse_credit_opinion(pdf_bytes):
     for page in doc:
         text = page.get_text()
         if "Factor 1: Economic strength" in text or "Factor / Sub-Factor" in text:
-            scorecard_text = text
+            scorecard_text = text.replace('\n', ' ')
             break
     doc.close()
     if not scorecard_text:
