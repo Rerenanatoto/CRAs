@@ -767,14 +767,14 @@ def render_moody():
     # ═══════════════════════════════════════════════════════════════════
     # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
     # ═══════════════════════════════════════════════════════════════════
-        elif page == "4️⃣ Susceptibility to Event Risk":
+    elif page == "4️⃣ Susceptibility to Event Risk":
         st.header("4️⃣ Factor 4 – Susceptibility to Event Risk")
         st.markdown("Avalia os riscos de eventos: político, liquidez, bancário e externo. "
                     "O SETR é determinado pelo **pior** (maior score) dos 4 sub-fatores.")
         st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
         st.markdown("---")
 
-        # ── Political Risk ──────────────────────
+        # ── Political Risk ──
         st.subheader("🗳️ Political Risk")
         f4_pol_sel = st.selectbox(
             "🗳️ Domestic Political and Geopolitical Risk",
@@ -787,7 +787,7 @@ def render_moody():
 
         st.markdown("---")
 
-        # ── Government Liquidity Risk ────────────
+        # ── Government Liquidity Risk ──
         st.subheader("💰 Government Liquidity Risk")
         f4_ease_sel = st.selectbox(
             "💰 Ease of Access to Funding",
@@ -811,7 +811,7 @@ def render_moody():
 
         st.markdown("---")
 
-        # ── Banking Sector Risk ──────────────────
+        # ── Banking Sector Risk ──
         st.subheader("🏦 Banking Sector Risk")
         alpha21_opts = [r.upper() for r in RATING_SCALE]
         col3, col4 = st.columns(2)
@@ -843,7 +843,7 @@ def render_moody():
 
         st.markdown("---")
 
-        # ── External Vulnerability Risk ────────────
+        # ── External Vulnerability Risk ──
         st.subheader("🌐 External Vulnerability Risk")
         f4_ext_sel = st.selectbox(
             "🌐 External Vulnerability Risk",
@@ -867,7 +867,7 @@ def render_moody():
 
         st.markdown("---")
 
-        # ── Factor 4 Overall Adjustment ────────────
+        # ── Factor 4 Overall Adjustment ──
         oth_opts = [0, -1, -2]
         f4_oth = st.selectbox("🔧 Factor 4 Adj – Outros (scoring categories ↓)", options=oth_opts,
             index=oth_opts.index(st.session_state.f4_oth),
