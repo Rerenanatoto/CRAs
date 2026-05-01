@@ -639,6 +639,9 @@ def render_moody():
         st.markdown("Assesses institutional quality and policy effectiveness.")
         st.caption("WGI: **GE** = Government Effectiveness · **RL** = Rule of Law · **CC** = Control of Corruption")
         st.markdown("---")
+        _dir = os.path.dirname(os.path.abspath(__file__))
+        with st.expander("📊 Methodology reference – Institutions & Governance scoring descriptions (pp. 8-14)"):
+            st.image(os.path.join(_dir, "moody_factor2_descriptions.png"), use_container_width=True)
 
         f2_le = st.selectbox(
             "🏛️ Quality of Legislative & Executive Institutions (20%)",
@@ -773,6 +776,10 @@ def render_moody():
                     "O SETR é determinado pelo **pior** (maior score) dos 4 sub-fatores.")
         st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
         st.markdown("---")
+
+        _dir = os.path.dirname(os.path.abspath(__file__))
+        with st.expander("📊 Methodology reference – Susceptibility to Event Risk scoring descriptions (pp. 16-20)"):
+            st.image(os.path.join(_dir, "moody_factor4_descriptions.png"), use_container_width=True)
 
         # ── Political Risk ──
         st.subheader("🗳️ Political Risk")
@@ -1052,3 +1059,4 @@ def render_moody():
             "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
             "Os resultados são indicativos e não substituem a análise oficial da agência."
         )
+
