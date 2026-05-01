@@ -94,6 +94,20 @@ button[data-baseweb="tab"][aria-selected="true"] {
 .stDownloadButton > button:hover {
     background-color: #16304F !important;
 }
+/* File uploader na sidebar */
+section[data-testid="stSidebar"] .stFileUploader label,
+section[data-testid="stSidebar"] .stFileUploader small {
+    color: #FFFFFF !important;
+}
+section[data-testid="stSidebar"] .stFileUploader button {
+    background-color: rgba(255,255,255,0.2) !important;
+    color: #FFFFFF !important;
+    border: 1px solid rgba(255,255,255,0.4) !important;
+}
+section[data-testid="stSidebar"] .stFileUploader [data-testid="stFileUploaderDropzone"] {
+    background-color: rgba(255,255,255,0.1) !important;
+    border: 1px dashed rgba(255,255,255,0.4) !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
