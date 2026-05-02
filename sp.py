@@ -292,68 +292,6 @@ RATING_SCALE = [
 # Lógica metodologia
 # ============================================================
 
-
-# ============================================================
-# External Assessment – quantitative helpers (Table 4)
-# ============================================================
-
-EXT_LIQUIDITY_THRESHOLDS = [
-    # (label, lo_pct, hi_pct)   – ratio = gross_ext_fin_needs / (CAR + usable_reserves)
-    ("≤50%",    0,   50),
-    ("50–100%", 50, 100),
-    ("100–150%",100,150),
-    (">150%",   150, 9999),
-]
-
-EXT_INDEBTEDNESS_THRESHOLDS = [
-    # (label, lo_pct, hi_pct)  – narrow net ext debt / CAR (or CAP if assets > debt)
-    ("< −50%",  -9999, -50),
-    ("−50–0%",  -50,     0),
-    ("0–50%",     0,    50),
-    ("50–100%",  50,   100),
-    ("100–150%",100,   150),
-    ("150–200%",150,   200),
-    (">200%",   200,  9999),
-]
-
-# Table 4 initial‑assessment grid
-# rows = indebtedness bucket (0‑6), cols depend on currency status
-# For reserve‑currency sovereigns: single column
-# For actively‑traded: single column
-# For others: 4 liquidity columns (≤50, 50‑100, 100‑150, >150)
-_T4_RESERVE = [1, 1, 1, 2, 2, 3, 3]
-_T4_ACTIVE  = [1, 1, 2, 2, 3, 4, 4]
-_T4_OTHER   = [
-    # ≤50  50-100  100-150  >150
-    [1,    1,      1,       2],   # <-50%
-    [1,    1,      2,       3],   # -50–0%
-    [1,    2,      3,       4],   # 0–50%
-    [2,    3,      4,       5],   # 50–100%
-    [3,    4,      5,       5],   # 100–150%
-    [4,    5,      5,       6],   # 150–200%
-    [5,    6,      6,       6],   # >200%
-]
-
-def _bucket_idx(value, thresholds):
-    """Return the bucket index for *value* given a list of (label, lo, hi) tuples."""
-    for i, (_, lo, hi) in enumerate(thresholds):
-        if lo <= value < hi:
-            return i
-    return len(thresholds) - 1
-
-def ext_initial_assessment(currency_status: str,
-                           indebtedness_pct: float,
-                           liquidity_pct: float = 0.0) -> int:
-    """Return initial external assessment 1‑6 per Table 4."""
-    row = _bucket_idx(indebtedness_pct, EXT_INDEBTEDNESS_THRESHOLDS)
-    if currency_status == "Reserve currency":
-        return _T4_RESERVE[row]
-    if currency_status == "Actively traded":
-        return _T4_ACTIVE[row]
-    col = _bucket_idx(liquidity_pct, EXT_LIQUIDITY_THRESHOLDS)
-    return _T4_OTHER[row][col]
-
-
 def fp_bucket_index(fp_profile: float) -> int:
     x = fp_profile
     if x <= 1.7: return 0
@@ -975,6 +913,80 @@ def render_table_tab(df: pd.DataFrame):
 # UI metodologia (agora dentro da 1ª aba)
 # ============================================================
 
+
+
+# ============================================================
+# Auto-fill da metodologia a partir do SRI
+# ============================================================
+
+_SRI_INDICATOR_MAP = {
+    # indicator_key (slugified) -> (session_state_key, transform)
+    # Economic assessment
+    "gdp_per_capita_000s":              ("eco_gdppc",                   lambda v: v * 1000),
+    "real_gdp_per_capita_growth":       ("eco_trend",                   None),
+    # Fiscal assessment – Performance & Flexibility
+    "change_in_net_gg_debt_gdp":        ("fis_perf_change_net_debt_gdp", None),
+    # Fiscal assessment – Debt burden
+    "net_gg_debt_gdp":                  ("fis_debt_net_debt_gdp",        None),
+    "gg_interest_expenditure_revenues": ("fis_debt_interest_to_rev",     None),
+}
+
+
+def _latest_value(df_country, indicator_key, prefer_forecast=False):
+    """Get the latest available value for an indicator from the SRI data."""
+    sub = df_country[df_country["indicator_key"] == indicator_key].dropna(subset=["value"])
+    if sub.empty:
+        return None
+    if prefer_forecast:
+        fc = sub[sub["is_forecast"]]
+        if not fc.empty:
+            return fc.sort_values("year_num", ascending=False).iloc[0]["value"]
+    actual = sub[~sub["is_forecast"]]
+    if not actual.empty:
+        return actual.sort_values("year_num", ascending=False).iloc[0]["value"]
+    return sub.sort_values("year_num", ascending=False).iloc[0]["value"]
+
+
+def _forecast_avg(df_country, indicator_key):
+    """Average of forecast years for an indicator (used for change in debt/GDP)."""
+    sub = df_country[
+        (df_country["indicator_key"] == indicator_key) & df_country["is_forecast"]
+    ].dropna(subset=["value"])
+    if sub.empty:
+        return _latest_value(df_country, indicator_key)
+    return sub["value"].mean()
+
+
+def auto_fill_from_sri(df, country_name):
+    """Fill session_state methodology inputs from SRI data for a given country.
+    Returns a dict of {label: value} for display."""
+    df_c = df[df["country_name"].str.lower() == country_name.lower()].copy()
+    if df_c.empty:
+        return {}
+
+    filled = {}
+
+    for ind_key, (ss_key, transform) in _SRI_INDICATOR_MAP.items():
+        if ind_key == "change_in_net_gg_debt_gdp":
+            val = _forecast_avg(df_c, ind_key)
+        else:
+            val = _latest_value(df_c, ind_key)
+        if val is not None:
+            try:
+                val = float(val)
+            except (ValueError, TypeError):
+                continue
+            if pd.isna(val):
+                continue
+            if transform is not None:
+                val = transform(val)
+            val = round(val, 2)
+            st.session_state[ss_key] = val
+            filled[ss_key] = val
+
+    return filled
+
+
 def render_methodology_tab():
     st.header("Metodologia")
     method_page = st.selectbox(
@@ -984,6 +996,52 @@ def render_methodology_tab():
         label_visibility="collapsed",
     )
     st.markdown("---")
+
+
+    # ── Auto-fill from SRI ──────────────────────────────────────
+    with st.expander("\U0001f4e5 Auto-preencher dados a partir do SRI", expanded=False):
+        sri_file = st.file_uploader(
+            "Upload do arquivo SRI (.xlsx)",
+            type=["xlsx"],
+            key="sri_methodology_upload",
+            help="Envie o arquivo SRI (base de dados da S&P) para preencher automaticamente os inputs num\u00e9ricos.",
+        )
+        sri_df = None
+        if sri_file is not None:
+            sri_df = load_workbook(sri_file.getvalue())
+        else:
+            local = find_local_xlsx()
+            if local is not None:
+                sri_df = load_workbook()
+
+        if sri_df is not None and not sri_df.empty:
+            countries = sorted(sri_df["country_name"].dropna().unique().tolist())
+            default_idx = 0
+            for i, c in enumerate(countries):
+                if c.lower() == "brazil":
+                    default_idx = i
+                    break
+            selected_country = st.selectbox(
+                "Pa\u00eds",
+                countries,
+                index=default_idx,
+                key="sri_auto_fill_country",
+            )
+            if st.button("\U0001f504 Preencher dados automaticamente", key="btn_auto_fill"):
+                filled = auto_fill_from_sri(sri_df, selected_country)
+                if filled:
+                    st.success(f"\u2705 {len(filled)} campo(s) preenchido(s) para **{selected_country}**:")
+                    for k, v in filled.items():
+                        st.write(f"  - `{k}` = **{v}**")
+                    st.info("Os valores foram aplicados aos inputs abaixo. Navegue pelas se\u00e7\u00f5es para conferir.")
+                else:
+                    st.warning(f"Nenhum dado encontrado para '{selected_country}'.")
+        elif sri_file is not None:
+            st.warning("N\u00e3o foi poss\u00edvel parsear o arquivo enviado.")
+        else:
+            st.info("Nenhum arquivo SRI dispon\u00edvel. Fa\u00e7a upload ou adicione base.xlsx em ./data.")
+    st.markdown("---")
+
 
     if method_page == "Visão geral":
         st.title("📊 S&P Sovereign Rating Methodology – Dashboard")
@@ -1141,424 +1199,303 @@ def render_methodology_tab():
         st.session_state["economic"] = int(final_score)
 
     elif method_page == "Fiscal":
-        st.header("Fiscal Assessment")
-        st.markdown(
-            "The fiscal assessment reflects the sustainability of a sovereign's "
-            "deficits and its debt burden (Table 5 & Table 6). It is divided into "
-            "**fiscal performance & flexibility** and **debt burden**, and the overall "
-            "assessment is the average of those two."
-        )
-
-        with st.expander("📖 Reference – Table 5: Fiscal Performance & Flexibility"):
-            st.markdown("""
-| Change in net GG debt (% GDP) | <0–1% | 0–3% | 2–4% | 3–5% | 4–7% | >6% |
-|---|---|---|---|---|---|---|
-| **Initial assessment** | 1 | 2 | 3 | 4 | 5 | 6 |
-
-*Positive adjustments* (+1 each): large liquid financial assets (>25 % GDP); greater revenue/expenditure flexibility vs peers.
-
-*Negative adjustments* (−1 each): volatile/unsustainable revenue base; limited ability to raise revenues; shortfalls in basic services/infrastructure; unaddressed age-related spending pressure.
-            """)
-
-        with st.expander("📖 Reference – Table 6: Debt Burden"):
-            st.markdown("""
-| | Net GG debt ≤30% | 30–60% | 60–80% | 80–100% | >100% |
-|---|---|---|---|---|---|
-| **Interest ≤5% rev** | 1 | 2 | 3 | 4 | 5 |
-| **5–10%** | 2 | 3 | 4 | 5 | 6 |
-| **10–15%** | 3 | 4 | 5 | 6 | 6 |
-| **>15%** | 4 | 5 | 6 | 6 | 6 |
-
-*Negative adjustments* (−1 each, if ≥2 of 4 conditions): >40% FC debt or avg maturity <3 yr;
-non‑residents hold >60% commercial debt; lumpy amortisation profile; banking‑sector exposure >20% assets.
-
-*Contingent liabilities* (Table 7): limited → 0; moderate → −1; high → −2; very high → −3.
-            """)
-
+        st.title("Fiscal assessment")
+        st.caption("Cálculo baseado nas Table 5 e 6, com critérios e ajustes no mesmo estilo da aba External (sem barras/sliders para score inicial).")
+        st.markdown("## 1) Fiscal performance & flexibility (Table 5)")
+        c1, c2 = st.columns([1, 1])
+        with c1:
+            change_net_debt_gdp = st.number_input("Average change in net general government debt (% of GDP)", value=3.0, step=0.1, key="fis_perf_change_net_debt_gdp")
+        with c2:
+            overlap_trend = st.selectbox("Se cair em faixa sobreposta da Table 5, qual a tendência?", ["estável", "melhorando", "piorando"], index=0, key="fis_perf_overlap_trend")
+        perf_init = table5_initial_from_inputs(change_net_debt_gdp, overlap_trend)
+        st.metric("Initial assessment (Table 5)", perf_init)
+        with st.expander("Ajustes positivos (melhoram 1 categoria cada) — Table 5", expanded=False):
+            fis_perf_pos1 = st.checkbox("Government with large liquid financial assets", key="fis_perf_pos_liquid_assets")
+            fis_perf_pos2 = st.checkbox("Greater ability to raise revenues / cut expenditures in the short term", key="fis_perf_pos_flexibility")
+        with st.expander("Ajustes negativos (pioram 1 categoria cada) — Table 5", expanded=False):
+            fis_perf_neg1 = st.checkbox("Unsustainable or volatile revenue base", key="fis_perf_neg_volatile_revenue")
+            fis_perf_neg2 = st.checkbox("Limited ability to raise revenues in the short term", key="fis_perf_neg_limited_revenue")
+            fis_perf_neg3 = st.checkbox("Shortfalls in basic services and infrastructure", key="fis_perf_neg_infra")
+            fis_perf_neg4 = st.checkbox("Unaddressed medium-term age-related expenditure pressure", key="fis_perf_neg_ageing")
+        perf_pos_count = int(fis_perf_pos1) + int(fis_perf_pos2)
+        perf_neg_count = int(fis_perf_neg1) + int(fis_perf_neg2) + int(fis_perf_neg3) + int(fis_perf_neg4)
+        perf_adj_raw = (-1 * perf_pos_count) + (1 * perf_neg_count)
+        perf_adj = max(-2, min(2, perf_adj_raw))
+        perf_final = clamp_score(perf_init + perf_adj)
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Positivos marcados", perf_pos_count)
+        m2.metric("Negativos marcados", perf_neg_count)
+        m3.metric("Ajuste líquido (cap ±2)", f"{perf_adj:+d}")
+        if perf_adj != perf_adj_raw:
+            st.caption(f"Ajuste bruto era {perf_adj_raw:+d}, mas foi limitado para ±2 conforme Table 5.")
+        st.metric("Fiscal performance & flexibility (final)", perf_final)
+        img = ASSETS_DIR / "page_31_img_01.png"
+        with st.expander("Ver Tabela 5 (imagem do PDF)"):
+            if img.exists(): show_image(img)
+            else: st.info("Imagem da Tabela 5 não encontrada em assets/.")
         st.markdown("---")
-
-        # ── Fiscal Performance & Flexibility ───────────────────────
-        st.subheader("A. Fiscal Performance & Flexibility")
-
-        fis_chg_net_debt = st.number_input(
-            "Δ Net GG Debt / GDP (%)",
-            value=st.session_state.get("fis_chg_net_debt", 3.0),
-            step=0.5, format="%.1f",
-            help="Average of current-year estimate and 2-3 yr forecast.",
-        )
-        st.session_state["fis_chg_net_debt"] = fis_chg_net_debt
-
-        # auto score
-        _fp_thresholds = [(1, 1.0), (3, 2.0), (4, 3.0), (5, 4.0), (7, 5.0)]
-        _fp_init = 6
-        for hi, sc in _fp_thresholds:
-            if fis_chg_net_debt <= hi:
-                _fp_init = int(sc)
-                break
-
-        fp_overlap_adj = st.selectbox(
-            "Overlap-zone trend adjustment",
-            options=[-1, 0, 1],
-            index=1,
-            help="If the ratio falls in an overlap zone between two buckets, "
-                 "declining trend → −1 (better); rising → +1 (worse).",
-        )
-        _fp_init_adj = max(1, min(6, _fp_init + fp_overlap_adj))
-
-        fis_pos_adj = st.multiselect(
-            "Positive adjustments (+1 each, max 2)",
-            options=[
-                "Large liquid financial assets (>25% GDP)",
-                "Greater revenue/expenditure flexibility vs peers",
-            ],
-            default=[],
-        )
-        fis_neg_adj = st.multiselect(
-            "Negative adjustments (−1 each, max 2)",
-            options=[
-                "Volatile/unsustainable revenue base",
-                "Limited ability to raise revenues",
-                "Shortfalls in basic services / infrastructure",
-                "Unaddressed age-related expenditure pressure",
-            ],
-            default=[],
-        )
-        _fp_adj = min(len(fis_pos_adj), 2) - min(len(fis_neg_adj), 2)
-        fp_final = max(1, min(6, _fp_init_adj + _fp_adj))
-        st.session_state["sp_fiscal_perf"] = fp_final
-
-        st.info(f"**Fiscal Performance & Flexibility** initial = {_fp_init} → "
-                f"overlap adj → {_fp_init_adj} → net adj {_fp_adj:+d} → **{fp_final}**")
-
+        st.markdown("## 2) Debt burden (Table 6)")
+        c1, c2 = st.columns(2)
+        with c1:
+            net_debt_gdp = st.number_input("Net general government debt (% of GDP)", value=65.0, step=0.1, key="fis_debt_net_debt_gdp")
+        with c2:
+            interest_to_rev = st.number_input("General government interest expenditures (% of revenues)", value=8.0, step=0.1, key="fis_debt_interest_to_rev")
+        debt_init = table6_initial_from_inputs(net_debt_gdp, interest_to_rev)
+        st.metric("Initial assessment (Table 6)", debt_init)
+        with st.expander("Ajuste positivo (melhora 1 categoria) — Table 6", expanded=False):
+            debt_pos1 = st.checkbox("Official concessional financing likely covers gross borrowing requirements in the next 2–3 years", key="fis_debt_pos_concessional")
+        with st.expander("Ajuste negativo por debt structure / funding access (piora 1 categoria se 2+ condições) — Table 6", expanded=False):
+            debt_neg_cond1 = st.checkbox("More than 40% of gross debt is in foreign currency OR average maturity is typically below 3 years", key="fis_debt_neg_fx_or_maturity")
+            debt_neg_cond2 = st.checkbox("Nonresidents hold consistently more than 60% of government commercial debt", key="fis_debt_neg_nonresidents")
+            debt_neg_cond3 = st.checkbox("Debt service profile is subject to significant variations", key="fis_debt_neg_lumpy_profile")
+            debt_neg_cond4 = st.checkbox("Banking sector exposure to government is typically above 20% of assets", key="fis_debt_neg_bank_exposure")
+        debt_neg_conditions_count = int(debt_neg_cond1) + int(debt_neg_cond2) + int(debt_neg_cond3) + int(debt_neg_cond4)
+        debt_structure_adj = 1 if (net_debt_gdp > 10 and debt_neg_conditions_count >= 2) else 0
+        st.markdown("### Contingent liabilities (Table 7, aplicadas dentro da Table 6)")
+        c1, c2 = st.columns(2)
+        with c1:
+            bicra = st.selectbox("BICRA group", ["1-5", "6-7", "8-9", "10"], key="fis_bicra_group")
+        with c2:
+            bank_assets = st.selectbox("Banks' assets / GDP", ["<=50%", "50-100%", "100-250%", "250-500%", ">500%"], key="fis_bank_assets_bucket")
+        cl_cat = CONTINGENT_TABLE7[bicra][bank_assets]
+        st.write(f"Categoria sugerida (Table 7): **{cl_cat}**")
+        if CONTINGENT_TO_DEBT_ADJ.get(cl_cat) is None:
+            chosen = st.selectbox("Escolha a categoria final para contingent liabilities", [c.strip() for c in cl_cat.split("/")], key="fis_cl_choose")
+            cl_adj = CONTINGENT_TO_DEBT_ADJ[chosen]
+        else:
+            cl_adj = CONTINGENT_TO_DEBT_ADJ[cl_cat]
+        debt_pos_adj = -1 if debt_pos1 else 0
+        debt_adj_raw = debt_pos_adj + debt_structure_adj + int(cl_adj)
+        debt_adj = max(-1, min(3, debt_adj_raw))
+        debt_final = clamp_score(debt_init + debt_adj)
+        d1, d2, d3, d4 = st.columns(4)
+        d1.metric("Condições negativas marcadas", debt_neg_conditions_count)
+        d2.metric("Ajuste por estrutura/funding", f"{debt_structure_adj:+d}")
+        d3.metric("Ajuste por contingent liabilities", f"{int(cl_adj):+d}")
+        d4.metric("Ajuste líquido (cap -1 / +3)", f"{debt_adj:+d}")
+        if debt_adj != debt_adj_raw:
+            st.caption(f"Ajuste bruto era {debt_adj_raw:+d}, mas foi limitado conforme Table 6.")
+        st.metric("Debt burden (final)", debt_final)
+        img = ASSETS_DIR / "page_36_img_01.png"
+        with st.expander("Ver Tabela 6 (imagem do PDF)"):
+            if img.exists(): show_image(img)
+            else: st.info("Imagem da Tabela 6 não encontrada em assets/.")
         st.markdown("---")
-
-        # ── Debt Burden ────────────────────────────────────────────
-        st.subheader("B. Debt Burden")
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            fis_net_debt_gdp = st.number_input(
-                "Net GG Debt / GDP (%)", value=st.session_state.get("fis_net_debt_gdp", 60.0),
-                step=1.0, format="%.1f",
-            )
-            st.session_state["fis_net_debt_gdp"] = fis_net_debt_gdp
-        with col_b:
-            fis_int_rev = st.number_input(
-                "GG Interest / Revenue (%)", value=st.session_state.get("fis_int_rev", 8.0),
-                step=0.5, format="%.1f",
-            )
-            st.session_state["fis_int_rev"] = fis_int_rev
-
-        # Table 6 auto-score
-        _debt_cols = [30, 60, 80, 100]
-        _int_rows  = [5, 10, 15]
-        _t6 = [
-            [1,2,3,4,5],
-            [2,3,4,5,6],
-            [3,4,5,6,6],
-            [4,5,6,6,6],
-        ]
-        def _col6(d):
-            for i, th in enumerate(_debt_cols):
-                if d <= th: return i
-            return 4
-        def _row6(r):
-            for i, th in enumerate(_int_rows):
-                if r <= th: return i
-            return 3
-        db_init = _t6[_row6(fis_int_rev)][_col6(fis_net_debt_gdp)]
-
-        st.markdown("**Debt-structure adjustment** (−1 if ≥2 of 4 conditions met):")
-        debt_struct = st.multiselect(
-            "Conditions",
-            options=[
-                ">40% gross debt in FC or avg maturity <3 yr",
-                "Non-residents hold >60% commercial debt",
-                "Lumpy amortisation profile",
-                "Banking sector exposure >20% of assets",
-            ],
-            default=[],
-        )
-        _ds_adj = -1 if len(debt_struct) >= 2 else 0
-
-        concess_adj = st.checkbox("Concessional official financing covers gross borrowing (next 2-3 yr)", value=False)
-        _conc = 1 if concess_adj else 0
-
-        contingent = st.selectbox(
-            "Contingent liabilities (Table 7)",
-            options=["Limited (0)", "Moderate (−1)", "High (−2)", "Very high (−3)"],
-            index=0,
-        )
-        _cl_map = {"Limited (0)": 0, "Moderate (−1)": -1, "High (−2)": -2, "Very high (−3)": -3}
-        _cl = _cl_map[contingent]
-
-        db_final = max(1, min(6, db_init + _ds_adj + _conc + _cl))
-        st.session_state["sp_debt_burden"] = db_final
-
-        st.info(f"**Debt Burden** initial = {db_init} → debt-struct {_ds_adj:+d}, "
-                f"concessional {_conc:+d}, contingent {_cl:+d} → **{db_final}**")
-
-        # ── Overall Fiscal ─────────────────────────────────────────
-        st.markdown("---")
-        st.subheader("C. Overall Fiscal Assessment")
-        fiscal_avg = (fp_final + db_final) / 2.0
-        fiscal_rounded = round(fiscal_avg)
-        st.session_state["sp_fiscal"] = fiscal_rounded
-
-        st.success(f"**Fiscal Assessment** = avg({fp_final}, {db_final}) = "
-                   f"{fiscal_avg:.1f} → rounded **{fiscal_rounded}**")
-
+        fiscal_final = round_to_half((perf_final + debt_final) / 2.0)
+        st.metric("Fiscal assessment (average of the two segments)", fmt_score(fiscal_final))
+        st.session_state["fiscal"] = float(fiscal_final)
 
     elif method_page == "Monetary":
-        st.header("Monetary Assessment")
-        st.markdown(
-            "The monetary assessment considers the monetary authority's ability to "
-            "fulfil its mandate while sustaining a balanced economy and attenuating "
-            "major shocks.  It combines **exchange-rate regime** (Table 8A) and "
-            "**monetary-policy credibility** (Table 8B) with weights 40 %/60 %."
+        st.title("Monetary assessment")
+        st.caption(
+            "Cálculo baseado nas Tables 8A e 8B, com combinação de 40% para exchange-rate regime "
+            "e 60% para monetary policy credibility, além dos ajustes negativos previstos na metodologia."
         )
-
-        with st.expander("📖 Reference – Table 8A: Exchange-Rate Regime"):
-            st.markdown("""
-| Score | Regime |
-|---|---|
-| 1 | Reserve currency |
-| 2 | Actively traded or free-floating currency |
-| 3 | Managed float, crawling pegs, soft pegs other than conventional pegs |
-| 4 | Conventional pegged arrangement; heavy FX intervention |
-| 5 | Hard peg (currency board) |
-| 6 | No local currency (uses another sovereign's currency) |
-            """)
-
-        with st.expander("📖 Reference – Table 8B: Monetary Policy Credibility"):
-            st.markdown("""
-Assessed 1–6 across five dimensions:
-- **Central bank independence** (track record, legal framework)
-- **Monetary policy tools & effectiveness**
-- **Price stability** (CPI vs trading partners, REER stability)
-- **Lender of last resort** capacity
-- **Financial system depth** (depository claims + bond market / GDP)
-            """)
-
-        with st.expander("📖 Reference – Negative adjustments (¶121)"):
-            st.markdown("""
-Up to −2 categories from the initial monetary assessment:
-1. Weak / significantly weakening transmission mechanisms
-2. Dollarisation >50 % of deposits or loans
-3. Extensive exchange restrictions (non-compliance with IMF Art. VIII)
-
-**Monetary-union members** (¶122-124): up to −2 additional categories:
-- −1 for less flexibility than sovereigns with own central bank
-- −1 if economy is unsynchronised with the union at large
-            """)
-
+    
+        st.markdown("## 1) Exchange-rate regime")
+        c1, c2 = st.columns([1.2, 0.8])
+    
+        with c1:
+            exr_score = st.selectbox(
+                "Exchange-rate regime – initial assessment",
+                options=[row["Score"] for row in MONETARY_TABLE8A],
+                index=1,
+                key="mon_exr_score",
+                format_func=lambda x: next(
+                    row["Exchange-rate regime"]
+                    for row in MONETARY_TABLE8A
+                    if row["Score"] == x
+                ),
+            )
+        with c2:
+            st.metric("Exchange-rate regime score", exr_score)
+    
+        img = ASSETS_DIR / "page_27_img_01.png"
+        with st.expander("Ver Tabela 8A (imagem do PDF)", expanded=False):
+            if img.exists():
+                show_image(img)
+            else:
+                st.info("Imagem da Tabela 8A não encontrada em assets/.")
+    
         st.markdown("---")
-
-        # ── Exchange-rate regime ───────────────────────────────────
-        st.subheader("A. Exchange-Rate Regime (Table 8A)")
-        er_options = [
-            "1 – Reserve currency",
-            "2 – Actively traded / free-floating",
-            "3 – Managed float / crawling peg / soft peg",
-            "4 – Conventional peg / heavy FX intervention",
-            "5 – Hard peg (currency board)",
-            "6 – No local currency",
-        ]
-        er_idx = st.selectbox(
-            "Exchange-rate regime",
-            options=er_options,
-            index=st.session_state.get("sp_mon_er_idx", 1),
-            help="Select the regime that best describes the sovereign.",
+        st.markdown("## 2) Monetary policy credibility")
+    
+        def build_mon_cred_option_blocks(score: int):
+            crit = MONETARY_TABLE8B[score]
+            intro = (
+                "All or most of the following factors apply"
+                if score in [1, 2, 3, 4]
+                else "Any of the following factors apply"
+            )
+    
+            factors = [
+                crit["monetary_authority_independence"],
+                crit["monetary_policy_tools_and_effectiveness"],
+                crit["price_stability"],
+                crit["lender_of_last_resort"],
+                crit["local_financial_system_and_capital_markets"],
+            ]
+            factors = [f for f in factors if f and str(f).strip()]
+            return intro, factors
+    
+        cred_score = st.selectbox(
+            "Escolha o nível de monetary policy credibility conforme Table 8B",
+            [MONETARY_TABLE8B_SUMMARY[i] for i in [1, 2, 3, 4, 5, 6]],
+            index=2,
+            key="mon_cred_choice",
         )
-        er_score = int(er_idx[0])
-        st.session_state["sp_mon_er_idx"] = er_options.index(er_idx)
-        st.session_state["sp_mon_er"] = er_score
-
+    
+        cred_score = int(str(cred_score).split("–")[0].strip())
+    
+        with st.expander("Ver fatores do nível selecionado", expanded=False):
+            intro, factors = build_mon_cred_option_blocks(cred_score)
+            st.markdown(f"**{intro}**")
+            for factor in factors:
+                st.markdown(f"- {factor}")
+    
+        c1, c2 = st.columns([1.55, 0.45])
+        with c1:
+            img = ASSETS_DIR / "page_28_img_01.png"
+            with st.expander("Ver Tabela 8B (imagem do PDF)", expanded=False):
+                if img.exists():
+                    show_image(img)
+                else:
+                    st.info("Imagem da Tabela 8B não encontrada em assets/.")
+        with c2:
+            st.metric("Monetary policy credibility score", cred_score)
+    
+        initial_monetary = 0.4 * float(exr_score) + 0.6 * float(cred_score)
+    
+        st.markdown("### Initial monetary assessment")
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Exchange-rate regime (40%)", exr_score)
+        m2.metric("Credibility (60%)", cred_score)
+        m3.metric("Initial assessment", f"{initial_monetary:.1f}")
+    
         st.markdown("---")
-
-        # ── Monetary-policy credibility ────────────────────────────
-        st.subheader("B. Monetary Policy Credibility (Table 8B)")
-        st.markdown("Rate each dimension 1 (strongest) to 6 (weakest).")
-
-        mc_dims = [
-            ("CB independence", "sp_mon_cb_indep", 2,
-             "Track record length and legal independence of the central bank."),
-            ("Policy tools & effectiveness", "sp_mon_tools", 2,
-             "Breadth and tested effectiveness of monetary instruments."),
-            ("Price stability", "sp_mon_price", 2,
-             "CPI alignment with trading partners; REER stability."),
-            ("Lender of last resort", "sp_mon_lolr", 2,
-             "Ability to provide emergency liquidity to the financial system."),
-            ("Financial system depth", "sp_mon_depth", 3,
-             "Depository claims + bond / equity mkt cap relative to GDP."),
-        ]
-        mc_scores = []
-        cols = st.columns(len(mc_dims))
-        for col_w, (label, key, default, tip) in zip(cols, mc_dims):
-            with col_w:
-                v = st.number_input(
-                    label, min_value=1, max_value=6,
-                    value=st.session_state.get(key, default),
-                    help=tip,
+        st.markdown("## 3) Negative adjustments")
+        with st.expander(
+            "Ajustes negativos aplicáveis ao sovereign (máximo de 2 categorias)",
+            expanded=False,
+        ):
+            mon_neg_1 = st.checkbox(
+                "Weak or significantly weakening transmission mechanisms",
+                key="mon_neg_transmission",
+            )
+            mon_neg_2 = st.checkbox(
+                "Dollarization: resident deposits or loans in foreign currency exceed roughly 50% of total",
+                key="mon_neg_dollarization",
+            )
+            mon_neg_3 = st.checkbox(
+                "Extensive exchange restrictions (for example, IMF Article VIII issues)",
+                key="mon_neg_exchange_restrictions",
+            )
+    
+        base_neg_raw = int(mon_neg_1) + int(mon_neg_2) + int(mon_neg_3)
+        base_neg = min(2, base_neg_raw)
+    
+        st.markdown("---")
+        st.markdown("## 4) Sovereigns in monetary unions")
+        in_monetary_union = st.checkbox(
+            "Sovereign is part of a monetary union",
+            key="mon_in_monetary_union",
+        )
+    
+        union_adj_raw = 0
+        union_adj = 0
+    
+        if in_monetary_union:
+            dominant_member = st.checkbox(
+                "Economy accounts for more than 50% of the monetary union GDP (do not apply the two union-specific adjustments)",
+                key="mon_union_dominant_member",
+            )
+            if not dominant_member:
+                with st.expander(
+                    "Ajustes específicos de membros de monetary union (máximo de 2 categorias)",
+                    expanded=False,
+                ):
+                    mu_neg_1 = st.checkbox(
+                        "Member states generally have less flexibility than sovereigns with their own central bank",
+                        key="mon_union_less_flexibility",
+                    )
+                    mu_neg_2 = st.checkbox(
+                        "Economy is unsynchronized with the monetary union / the union stance may be inappropriate for this sovereign",
+                        key="mon_union_unsynchronized",
+                    )
+                union_adj_raw = int(mu_neg_1) + int(mu_neg_2)
+                union_adj = min(2, union_adj_raw)
+            else:
+                st.info(
+                    "Como o país representa mais de 50% do PIB da união monetária, os dois ajustes específicos da união monetária não são aplicados."
                 )
-                st.session_state[key] = v
-                mc_scores.append(v)
-        mc_avg = sum(mc_scores) / len(mc_scores)
-        mc_rounded = round(mc_avg)
-        st.info(f"Monetary-policy credibility avg = {mc_avg:.2f} → rounded **{mc_rounded}**")
-
+    
         st.markdown("---")
-
-        # ── Initial monetary assessment ────────────────────────────
-        st.subheader("C. Initial Monetary Assessment")
-        init_mon = round(er_score * 0.4 + mc_rounded * 0.6)
-        st.markdown(f"ER regime **{er_score}** × 40 % + Credibility **{mc_rounded}** × 60 % "
-                    f"= {er_score*0.4 + mc_rounded*0.6:.1f} → rounded **{init_mon}**")
-
-        st.markdown("---")
-
-        # ── Negative adjustments ───────────────────────────────────
-        st.subheader("D. Negative Adjustments")
-        neg_mon = st.multiselect(
-            "Select applicable adjustments (−1 each, max −2)",
-            options=[
-                "Weak/weakening transmission mechanisms",
-                "Dollarisation >50% (deposits or loans)",
-                "Extensive exchange restrictions (IMF Art. VIII non-compliance)",
-            ],
-            default=[],
-        )
-        neg_adj = min(len(neg_mon), 2)
-
-        is_mu = st.checkbox("Sovereign is a member of a monetary union", value=False,
-                            help="Monetary-union members may receive up to 2 additional negative adjustments.")
-        mu_adj = 0
-        if is_mu:
-            mu_less_flex = st.checkbox("−1: Less flexibility than sovereigns with own CB", value=False)
-            mu_unsync = st.checkbox("−1: Economy unsynchronised with the zone at large", value=False)
-            mu_adj = int(mu_less_flex) + int(mu_unsync)
-
-        total_neg = neg_adj + mu_adj
-        mon_final = max(1, min(6, init_mon + total_neg))
-        st.session_state["sp_monetary"] = mon_final
-
-        if not is_mu and total_neg > 2:
-            st.warning("Non-union sovereigns: max −2 from initial assessment (¶121).")
-        if is_mu and total_neg > 4:
-            st.warning("Union members: max −4 total (−2 general + −2 union-specific) (¶124).")
-
-        st.success(f"**Monetary Assessment** = {init_mon} + {total_neg:+d} adjustments → **{mon_final}**")
-
+        final_monetary = min(6.0, initial_monetary + float(base_neg) + float(union_adj))
+    
+        st.markdown("## 5) Final monetary assessment")
+        f1, f2, f3, f4 = st.columns(4)
+        f1.metric("Initial assessment", f"{initial_monetary:.1f}")
+        f2.metric("Negative adjustments", f"+{base_neg}")
+        f3.metric("Monetary-union adjustments", f"+{union_adj}")
+        f4.metric("Monetary assessment (final)", fmt_score(final_monetary))
+    
+        st.session_state["monetary"] = float(final_monetary)
 
     elif method_page == "External":
-        st.header("External Assessment")
-        st.markdown(
-            "The external assessment reflects a country's ability to obtain foreign "
-            "funds to meet public- and private-sector obligations to non-residents.  "
-            "Three factors drive the assessment: **currency status**, **external "
-            "liquidity**, and **external indebtedness** (Table 4)."
-        )
-
-        with st.expander("📖 Reference – Table 4 grid"):
-            st.markdown("""
-**Indebtedness** (narrow net ext debt / CAR or CAP) vs **Liquidity** (gross ext financing needs / (CAR + usable reserves)):
-
-| Indebtedness \\ Liquidity | Reserve | Active | ≤50% | 50-100% | 100-150% | >150% |
-|---|---|---|---|---|---|---|
-| < −50% | 1 | 1 | 1 | 1 | 1 | 2 |
-| −50–0% | 1 | 1 | 1 | 1 | 2 | 3 |
-| 0–50% | 1 | 2 | 1 | 2 | 3 | 4 |
-| 50–100% | 2 | 2 | 2 | 3 | 4 | 5 |
-| 100–150% | 2 | 3 | 3 | 4 | 5 | 5 |
-| 150–200% | 3 | 4 | 4 | 5 | 5 | 6 |
-| >200% | 3 | 4 | 5 | 6 | 6 | 6 |
-
-*Adjustments* (max ±3 net): +1 for strong net IIP or active-currency CA surplus; −1 each for
-risk of deteriorating external financing, terms-of-trade volatility, low debt reflecting constraints,
-data inconsistencies, active-currency high CA deficit (−2 if very high).
-            """)
-
-        st.markdown("---")
-
-        # ── Currency status ────────────────────────────────────────
-        st.subheader("A. Currency Status")
-        ccy_opts = ["Reserve currency", "Actively traded", "Other"]
-        ccy_status = st.selectbox(
-            "Currency status in international transactions",
-            options=ccy_opts,
-            index=st.session_state.get("sp_ext_ccy_idx", 2),
-            help="Reserve: >3% of global allocated FX reserves. "
-                 "Actively traded: >1% of global FX turnover.",
-        )
-        st.session_state["sp_ext_ccy_idx"] = ccy_opts.index(ccy_status)
-
-        st.markdown("---")
-
-        # ── Key ratios ─────────────────────────────────────────────
-        st.subheader("B. Key Ratios")
-        col1, col2 = st.columns(2)
+        st.title("External assessment")
+        st.caption("Indicadores-chave e ajustes qualitativos conforme a Tabela 4 (ajuste máximo de ±3 categorias).")
+        col1, col2, col3 = st.columns(3)
         with col1:
-            ext_indebt = st.number_input(
-                "Narrow net ext debt / CAR (or CAP) (%)",
-                value=st.session_state.get("sp_ext_indebt", 30.0),
-                step=5.0, format="%.1f",
-                help="Positive = net debtor; negative = net creditor.",
-            )
-            st.session_state["sp_ext_indebt"] = ext_indebt
+            car = st.number_input("CAR (US$) – current account receipts", min_value=0.0, value=100.0, step=1.0, key="ext_car")
+            cap = st.number_input("CAP (US$) – current account payments", min_value=0.0, value=100.0, step=1.0, key="ext_cap")
         with col2:
-            if ccy_status == "Other":
-                ext_liq = st.number_input(
-                    "Gross ext financing needs / (CAR + usable reserves) (%)",
-                    value=st.session_state.get("sp_ext_liq", 80.0),
-                    step=5.0, format="%.1f",
-                )
-                st.session_state["sp_ext_liq"] = ext_liq
-            else:
-                ext_liq = 0.0
-                st.info("Liquidity ratio not used for reserve/actively-traded currencies.")
-
-        # Auto-score
-        ext_init = ext_initial_assessment(ccy_status, ext_indebt, ext_liq)
-        st.info(f"**Initial external assessment** (Table 4) = **{ext_init}**")
-
+            usable_res = st.number_input("Usable reserves (US$)", min_value=0.0, value=50.0, step=1.0, key="ext_res")
+            short_term_debt = st.number_input("Short-term external debt (US$)", min_value=0.0, value=30.0, step=1.0, key="ext_st_debt")
+        with col3:
+            lt_maturing = st.number_input("LT external debt maturing within year (US$)", min_value=0.0, value=10.0, step=1.0, key="ext_lt_mat")
+            net_ext_debt = st.number_input("Narrow net external debt (US$)", value=0.0, step=1.0, key="ext_net")
+        gross_fin_needs = cap + short_term_debt + lt_maturing
+        denom = car + usable_res
+        liquidity_ratio = (gross_fin_needs / denom * 100.0) if denom > 0 else None
+        ratio_car = (net_ext_debt / car * 100.0) if car > 0 else None
+        ratio_cap = (net_ext_debt / cap * 100.0) if cap > 0 else None
         st.markdown("---")
-
-        # ── Adjustments ────────────────────────────────────────────
-        st.subheader("C. Adjustments (max ±3 net)")
-        ext_pos = st.multiselect(
-            "Positive adjustments (+1 each)",
-            options=[
-                "Significantly stronger net IIP than narrow net ext debt",
-                "Active-currency sovereign running consistent CA surpluses",
-            ],
-            default=[],
-        )
-        ext_neg = st.multiselect(
-            "Negative adjustments (−1 each, unless noted)",
-            options=[
-                "Risk of marked deterioration in external financing (−1)",
-                "Significant terms-of-trade volatility (−1)",
-                "Low external debt reflects debt constraints (−1)",
-                "Material data inconsistencies (−1)",
-                "Active-currency: high CA deficit >10% CAR (−1)",
-                "Active-currency: very high CA deficit >20% CAR (−2)",
-            ],
-            default=[],
-        )
-        _pos = min(len(ext_pos), 2)
-        _neg = 0
-        for item in ext_neg:
-            if "(−2)" in item:
-                _neg += 2
-            else:
-                _neg += 1
-        net_adj = _pos - _neg
-        net_adj = max(-3, min(3, net_adj))
-        ext_final = max(1, min(6, ext_init + net_adj))
-        st.session_state["sp_external"] = ext_final
-
-        st.success(f"**External Assessment** = {ext_init} + ({net_adj:+d}) = **{ext_final}**")
-
+        m1, m2, m3, m4 = st.columns(4)
+        m1.metric("Gross external financing needs", f"{gross_fin_needs:,.2f}")
+        m2.metric("Liquidity ratio = GEFN / (CAR+res)", "—" if liquidity_ratio is None else f"{liquidity_ratio:,.1f}%")
+        m3.metric("Narrow net external debt / CAR", "—" if ratio_car is None else f"{ratio_car:,.1f}%")
+        m4.metric("Narrow net external debt / CAP", "—" if ratio_cap is None else f"{ratio_cap:,.1f}%")
+        st.markdown("---")
+        init_ext = st.selectbox("External assessment – score inicial (1–6)", [1, 2, 3, 4, 5, 6], index=2, key="ext_score")
+        with st.expander("Ajustes positivos (melhoram 1 categoria cada)", expanded=False):
+            pos1 = st.checkbox("País com posição líquida externa significativamente mais forte", key="ext_pos_net_position")
+            pos2 = st.checkbox("Moeda ativamente negociada + superávits recorrentes em conta corrente", key="ext_pos_atc_surplus")
+        with st.expander("Ajustes negativos (pioram 1 categoria cada; exceto quando indicado)", expanded=False):
+            neg1 = st.checkbox("Risco de deterioração acentuada no financiamento externo", key="ext_neg_financing")
+            neg2 = st.checkbox("Volatilidade significativa nos termos de troca", key="ext_neg_tot")
+            neg3 = st.checkbox("Baixa dívida externa reflete restrições de endividamento", key="ext_neg_constraints")
+            neg4 = st.checkbox("Inconsistências materiais de dados", key="ext_neg_data")
+            neg5 = st.checkbox("Moeda ativamente negociada + altos déficits em conta corrente", key="ext_neg_atc_high_def")
+            neg6 = st.checkbox("(piora 2 categorias) Moeda ativamente negociada + déficits muito altos em conta corrente", key="ext_neg_atc_very_high_def")
+        pos_count = int(pos1) + int(pos2)
+        neg_count = int(neg1) + int(neg2) + int(neg3) + int(neg4) + int(neg5) + int(neg6)
+        pos_adj = -1 * int(pos1) + -1 * int(pos2)
+        neg_adj = 1 * int(neg1) + 1 * int(neg2) + 1 * int(neg3) + 1 * int(neg4) + 1 * int(neg5) + 2 * int(neg6)
+        total_adj_raw = pos_adj + neg_adj
+        total_adj = max(-3, min(3, total_adj_raw))
+        s1, s2, s3 = st.columns([1, 1, 1])
+        s1.metric("Positivos marcados", pos_count)
+        s2.metric("Negativos marcados", neg_count)
+        s3.metric("Ajuste líquido (cap ±3)", f"{total_adj:+d}")
+        if total_adj != total_adj_raw:
+            st.caption(f"Ajuste bruto era {total_adj_raw:+d}, mas foi limitado para ±3 conforme Table 4.")
+        final_ext = clamp_score(init_ext + total_adj)
+        st.metric("External assessment (final)", final_ext)
+        img = ASSETS_DIR / "page_25_img_01.png"
+        with st.expander("Ver Tabela 4 (imagem do PDF)"):
+            if img.exists(): show_image(img)
+            else: st.info("Imagem da Tabela 4 não encontrada em assets/.")
+        st.session_state["external"] = int(final_ext)
 
     elif method_page == "Institutional":
         st.title("Institutional assessment")
@@ -1685,4 +1622,3 @@ def render_sp():
 - **value**: valor numérico convertido para análise.
                     """
                 )
-
