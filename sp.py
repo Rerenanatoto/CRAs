@@ -914,26 +914,63 @@ def render_table_tab(df: pd.DataFrame):
 # ============================================================
 
 
+# ═══════════════════════════════════════════════════════════════
+# AUTO-FILL da Metodologia a partir do SRI
+# ═══════════════════════════════════════════════════════════════
 
-# ============================================================
-# Auto-fill da metodologia a partir do SRI
-# ============================================================
+# ── Mapeamento direto: indicator_key → (session_state_key, transform) ──
+# Esses indicadores são copiados diretamente do SRI para o session_state.
+# O "transform" é uma função opcional para converter unidades.
+_SRI_DIRECT_MAP = {
+    # ─── ECONOMIC ASSESSMENT ───────────────────────────────────
+    # GDP per capita (000s $) → eco_gdppc em US$ inteiros
+    #   SRI fornece ex: 8.82 (mil $) → multiplica por 1000 → 8820 $
+    "gdp_per_capita_000s":              ("eco_gdppc",                     lambda v: v * 1000),
+    # Real GDP per capita trend growth (%)
+    #   SRI fornece ex: 1.60 → copia direto
+    "real_gdp_per_capita_growth":       ("eco_trend",                     None),
 
-_SRI_INDICATOR_MAP = {
-    # indicator_key (slugified) -> (session_state_key, transform)
-    # Economic assessment
-    "gdp_per_capita_000s":              ("eco_gdppc",                   lambda v: v * 1000),
-    "real_gdp_per_capita_growth":       ("eco_trend",                   None),
-    # Fiscal assessment – Performance & Flexibility
-    "change_in_net_gg_debt_gdp":        ("fis_perf_change_net_debt_gdp", None),
-    # Fiscal assessment – Debt burden
-    "net_gg_debt_gdp":                  ("fis_debt_net_debt_gdp",        None),
-    "gg_interest_expenditure_revenues": ("fis_debt_interest_to_rev",     None),
+    # ─── FISCAL ASSESSMENT – Performance & Flexibility ─────────
+    # Change in net GG debt/GDP (%) – usa MÉDIA dos anos forecast
+    #   SRI fornece ex: 2.5 → copia direto (% do PIB)
+    "change_in_net_gg_debt_gdp":        ("fis_perf_change_net_debt_gdp",  None),
+
+    # ─── FISCAL ASSESSMENT – Debt Burden ───────────────────────
+    # Net GG debt/GDP (%)
+    #   SRI fornece ex: 62.5 → copia direto
+    "net_gg_debt_gdp":                  ("fis_debt_net_debt_gdp",         None),
+    # GG interest expenditure/revenues (%)
+    #   SRI fornece ex: 14.8 → copia direto
+    "gg_interest_expenditure_revenues": ("fis_debt_interest_to_rev",      None),
+
+    # ─── EXTERNAL ASSESSMENT – Reservas ────────────────────────
+    # Usable reserves (US$ mil.) → ext_res em US$ bilhões
+    #   SRI fornece ex: 355620 (milhões) → divide por 1000 → 355.62 bi
+    "usable_reserves_us_mil":           ("ext_res",                       lambda v: v / 1000),
+}
+
+# ── Indicadores para cálculos derivados do External ──
+# Esses NÃO são copiados direto; são usados para CALCULAR os campos absolutos.
+_SRI_EXTERNAL_RATIO_KEYS = {
+    "cars_gdp":                          None,  # CARs/GDP (%) → para calcular CAR absoluto
+    "nominal_gdp_bil_us":                None,  # GDP nominal em bi US$ → base de cálculo
+    "current_account_balance_cars":       None,  # CA balance/CARs (%) → para derivar CAP
+    "narrow_net_ext_debt_cars":           None,  # Narrow net ext debt/CARs (%) → ext_net
+    "gross_ext_fin_needs_car_use_res":    None,  # Gross ext fin needs/(CAR+res) (%) → referência
+}
+
+# ── Referências que são exibidas mas não preenchem inputs ──
+_SRI_REFERENCE_MAP = {
+    # CPI growth (%) → referência para Monetary (selectbox é qualitativo)
+    "cpi_growth": "CPI (inflação, %)",
+    # Gross ext. fin. needs ratio → referência para External
+    "gross_ext_fin_needs_car_use_res": "Gross ext. fin. needs / (CAR + reserves) (%)",
 }
 
 
 def _latest_value(df_country, indicator_key, prefer_forecast=False):
-    """Get the latest available value for an indicator from the SRI data."""
+    """Obtém o valor mais recente de um indicador no SRI.
+    Se prefer_forecast=True, prioriza anos de projeção."""
     sub = df_country[df_country["indicator_key"] == indicator_key].dropna(subset=["value"])
     if sub.empty:
         return None
@@ -948,7 +985,9 @@ def _latest_value(df_country, indicator_key, prefer_forecast=False):
 
 
 def _forecast_avg(df_country, indicator_key):
-    """Average of forecast years for an indicator (used for change in debt/GDP)."""
+    """Média dos anos forecast para um indicador.
+    Usado para 'change in net GG debt/GDP' conforme a metodologia S&P
+    (média do ano corrente + 2-3 anos de projeção)."""
     sub = df_country[
         (df_country["indicator_key"] == indicator_key) & df_country["is_forecast"]
     ].dropna(subset=["value"])
@@ -957,34 +996,109 @@ def _forecast_avg(df_country, indicator_key):
     return sub["value"].mean()
 
 
+def _safe_float(val):
+    """Converte para float ignorando None/NaN."""
+    if val is None:
+        return None
+    try:
+        v = float(val)
+        return None if pd.isna(v) else v
+    except (ValueError, TypeError):
+        return None
+
+
+def _compute_external_absolutes(df_c):
+    """Calcula valores ABSOLUTOS (em US$ bi) para os inputs do External Assessment
+    a partir dos RATIOS fornecidos pelo SRI.
+
+    Cálculos realizados:
+    ─────────────────────
+    1) CAR (Current Account Receipts, US$ bi):
+       CAR = (CARs/GDP %) × GDP_nominal_bi / 100
+       Exemplo: 17.89% × 1476.11 = 264.1 bi
+
+    2) CAP (Current Account Payments, US$ bi):
+       CA_balance = (CA_balance/CARs %) × CAR / 100
+       CAP = CAR − CA_balance   (se CA negativo, CAP > CAR)
+       Exemplo: -9.17% × 264.1 = -24.2 → CAP = 264.1 − (−24.2) = 288.3 bi
+
+    3) ext_net (Narrow Net External Debt, US$ bi):
+       ext_net = (Narrow_net_ext_debt/CARs %) × CAR / 100
+       Exemplo: 45.3% × 264.1 = 119.6 bi
+
+    ► Reservas (ext_res) e dívida de curto prazo são preenchidas
+      diretamente pelo _SRI_DIRECT_MAP (não são calculadas aqui).
+    """
+    gdp = _safe_float(_latest_value(df_c, "nominal_gdp_bil_us"))
+    cars_gdp = _safe_float(_latest_value(df_c, "cars_gdp"))
+    ca_bal_cars = _safe_float(_latest_value(df_c, "current_account_balance_cars"))
+    nned_cars = _safe_float(_latest_value(df_c, "narrow_net_ext_debt_cars"))
+
+    results = {}
+
+    # 1) CAR
+    if gdp is not None and cars_gdp is not None:
+        car = cars_gdp * gdp / 100.0
+        results["ext_car"] = round(car, 2)
+
+        # 2) CAP
+        if ca_bal_cars is not None:
+            ca_balance = ca_bal_cars * car / 100.0
+            cap = car - ca_balance
+            results["ext_cap"] = round(cap, 2)
+
+        # 3) Narrow net external debt
+        if nned_cars is not None:
+            net = nned_cars * car / 100.0
+            results["ext_net"] = round(net, 2)
+
+    return results
+
+
 def auto_fill_from_sri(df, country_name):
-    """Fill session_state methodology inputs from SRI data for a given country.
-    Returns a dict of {label: value} for display."""
+    """Preenche os inputs do session_state com dados do SRI para um país.
+
+    Retorna dois dicts:
+      filled  = {ss_key: valor} → campos efetivamente preenchidos
+      refs    = {label: valor}  → valores de referência exibidos ao usuário
+    """
     df_c = df[df["country_name"].str.lower() == country_name.lower()].copy()
     if df_c.empty:
-        return {}
+        return {}, {}
 
     filled = {}
+    refs = {}
 
-    for ind_key, (ss_key, transform) in _SRI_INDICATOR_MAP.items():
+    # ── 1. Preenchimento direto (indicadores → session_state) ──
+    for ind_key, (ss_key, transform) in _SRI_DIRECT_MAP.items():
         if ind_key == "change_in_net_gg_debt_gdp":
+            # Usa média dos forecasts (metodologia S&P: average of current + 2-3yr)
             val = _forecast_avg(df_c, ind_key)
         else:
             val = _latest_value(df_c, ind_key)
-        if val is not None:
-            try:
-                val = float(val)
-            except (ValueError, TypeError):
-                continue
-            if pd.isna(val):
-                continue
-            if transform is not None:
-                val = transform(val)
-            val = round(val, 2)
-            st.session_state[ss_key] = val
-            filled[ss_key] = val
 
-    return filled
+        val = _safe_float(val)
+        if val is None:
+            continue
+        if transform is not None:
+            val = transform(val)
+        val = round(val, 2)
+        st.session_state[ss_key] = val
+        filled[ss_key] = val
+
+    # ── 2. Cálculos derivados do External ──
+    ext_abs = _compute_external_absolutes(df_c)
+    for ss_key, val in ext_abs.items():
+        st.session_state[ss_key] = val
+        filled[ss_key] = val
+
+    # ── 3. Valores de referência (não preenchem inputs) ──
+    for ind_key, label in _SRI_REFERENCE_MAP.items():
+        val = _safe_float(_latest_value(df_c, ind_key))
+        if val is not None:
+            refs[label] = round(val, 2)
+
+    return filled, refs
 
 
 def render_methodology_tab():
@@ -997,14 +1111,19 @@ def render_methodology_tab():
     )
     st.markdown("---")
 
-
     # ── Auto-fill from SRI ──────────────────────────────────────
     with st.expander("\U0001f4e5 Auto-preencher dados a partir do SRI", expanded=False):
+        st.markdown(
+            "Preenche automaticamente os inputs numéricos da metodologia "
+            "a partir dos dados do **Sovereign Risk Indicators (SRI)** da S&P. "
+            "Indicadores qualitativos (exchange-rate regime, credibilidade monetária) "
+            "permanecem manuais."
+        )
         sri_file = st.file_uploader(
             "Upload do arquivo SRI (.xlsx)",
             type=["xlsx"],
             key="sri_methodology_upload",
-            help="Envie o arquivo SRI (base de dados da S&P) para preencher automaticamente os inputs num\u00e9ricos.",
+            help="Envie o arquivo SRI para preencher automaticamente.",
         )
         sri_df = None
         if sri_file is not None:
@@ -1022,24 +1141,33 @@ def render_methodology_tab():
                     default_idx = i
                     break
             selected_country = st.selectbox(
-                "Pa\u00eds",
+                "\U0001f30d País",
                 countries,
                 index=default_idx,
                 key="sri_auto_fill_country",
             )
             if st.button("\U0001f504 Preencher dados automaticamente", key="btn_auto_fill"):
-                filled = auto_fill_from_sri(sri_df, selected_country)
+                filled, refs = auto_fill_from_sri(sri_df, selected_country)
                 if filled:
-                    st.success(f"\u2705 {len(filled)} campo(s) preenchido(s) para **{selected_country}**:")
-                    for k, v in filled.items():
-                        st.write(f"  - `{k}` = **{v}**")
-                    st.info("Os valores foram aplicados aos inputs abaixo. Navegue pelas se\u00e7\u00f5es para conferir.")
+                    st.success(f"\u2705 {len(filled)} campo(s) preenchido(s) para **{selected_country}**")
+                    cols_fill = st.columns(2)
+                    items = list(filled.items())
+                    half = (len(items) + 1) // 2
+                    for idx_col, col_widget in enumerate(cols_fill):
+                        with col_widget:
+                            for fk, fv in items[idx_col * half:(idx_col + 1) * half]:
+                                st.write(f"• `{fk}` = **{fv}**")
+                    if refs:
+                        st.markdown("**Referências (não preenchem inputs):**")
+                        for rlabel, rval in refs.items():
+                            st.write(f"  📌 {rlabel}: **{rval}**")
+                    st.info("Navegue pelas seções abaixo para conferir os valores preenchidos.")
                 else:
-                    st.warning(f"Nenhum dado encontrado para '{selected_country}'.")
+                    st.warning(f"Nenhum dado encontrado para \'{selected_country}\'.")
         elif sri_file is not None:
-            st.warning("N\u00e3o foi poss\u00edvel parsear o arquivo enviado.")
+            st.warning("Não foi possível parsear o arquivo enviado.")
         else:
-            st.info("Nenhum arquivo SRI dispon\u00edvel. Fa\u00e7a upload ou adicione base.xlsx em ./data.")
+            st.info("Nenhum arquivo SRI disponível. Faça upload ou adicione base.xlsx em ./data.")
     st.markdown("---")
 
 
