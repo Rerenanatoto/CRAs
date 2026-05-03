@@ -228,6 +228,325 @@ VARIABLE_RULES = {
 }
 
 # ============================================================
+# XLSB -> SRM Auto-Populate (Brazil)
+# ============================================================
+
+SRM_XLSB_MAP = {
+    "governance_indicator": {
+        "indicators": [], "measure": "latest", "transform": None,
+        "special": "wgi_composite",
+    },
+    "gdp_per_capita_percentile": {
+        "indicators": ["GDP per cap"], "unit_hint": None,
+        "section_hint": "INCOME",
+        "measure": "latest", "transform": "percentile_rank",
+    },
+    "share_world_gdp_log": {
+        "indicators": ["GDP"], "unit_hint": "USDbn",
+        "section_hint": "DOMESTIC",
+        "exclude": ["per cap", "real", "volat", "growth"],
+        "measure": "latest", "transform": "world_gdp_share_log",
+    },
+    "years_since_default_transform": {
+        "indicators": ["SRM-inverse", "SRM inverse", "yrs since"],
+        "measure": "latest", "transform": None,
+    },
+    "money_supply_log": {
+        "indicators": ["Broad money"], "unit_hint": "% GDP",
+        "section_hint": "MONEY",
+        "measure": "latest", "transform": "log",
+    },
+    "real_gdp_growth_volatility_log": {
+        "indicators": ["GDP volat"], "unit_hint": "Exp mov",
+        "measure": "latest", "transform": "log",
+    },
+    "consumer_price_inflation": {
+        "indicators": ["Consumer price", "Consumer prices"],
+        "section_hint": "DOMESTIC",
+        "measure": "3yr_avg", "transform": "truncate_2_50",
+    },
+    "real_gdp_growth": {
+        "indicators": ["Real GDP growth"], "section_hint": "DOMESTIC",
+        "exclude": ["volat"],
+        "measure": "3yr_avg", "transform": None,
+    },
+    "gross_general_govt_debt": {
+        "indicators": ["GG debt"], "unit_hint": "% GDP",
+        "section_hint": "GOVERNMENT", "exclude": ["mat", "% rev"],
+        "measure": "3yr_avg", "transform": None,
+    },
+    "general_govt_interest_revenue": {
+        "indicators": ["GG int"], "unit_hint": "% rev",
+        "section_hint": "GOVERNMENT",
+        "measure": "3yr_avg", "transform": None,
+    },
+    "general_govt_fiscal_balance": {
+        "indicators": ["GG balance"], "unit_hint": "% GDP",
+        "section_hint": "GOVERNMENT",
+        "measure": "3yr_avg", "transform": None,
+    },
+    "fc_govt_debt_share": {
+        "indicators": ["Public FC", "Foreign own-p", "FC govt"],
+        "measure": "3yr_avg", "transform": None,
+    },
+    "reserve_currency_flexibility": {
+        "indicators": ["SRM-reserve", "SRM reserve"],
+        "measure": "latest", "transform": None,
+    },
+    "sovereign_net_foreign_assets": {
+        "indicators": ["SNFA"], "unit_hint": "% GDP",
+        "measure": "3yr_avg", "transform": None,
+    },
+    "commodity_dependence": {
+        "indicators": ["Comm. dep", "Commodity dep"],
+        "measure": "latest", "transform": None,
+    },
+    "fx_reserves_months_cxp": {
+        "indicators": ["Reserves"], "unit_hint": "months",
+        "measure": "latest", "transform": None,
+    },
+    "external_interest_service": {
+        "indicators": ["Ext. int"], "unit_hint": "% CXR",
+        "exclude": ["% GDP"],
+        "measure": "3yr_avg", "transform": None,
+    },
+    "cab_plus_net_fdi": {
+        "indicators": ["CAB+Net FDI", "CAB + Net FDI"],
+        "unit_hint": "% GDP",
+        "measure": "3yr_avg", "transform": None,
+    },
+}
+
+
+def _find_indicator_rows(df_c, patterns, unit_hint=None,
+                         section_hint=None, exclude=None):
+    """Search parsed comparator DataFrame for rows matching indicator patterns."""
+    if df_c.empty or not patterns:
+        return pd.DataFrame()
+    mask = pd.Series(False, index=df_c.index)
+    ind_lower = df_c["indicator"].str.lower()
+    for pat in patterns:
+        mask = mask | ind_lower.str.contains(pat.lower(), na=False, regex=False)
+    if unit_hint:
+        u_col = (
+            df_c["unit"].str.lower()
+            if "unit" in df_c.columns
+            else pd.Series("", index=df_c.index)
+        )
+        mask = mask & u_col.str.contains(unit_hint.lower(), na=False, regex=False)
+    if section_hint:
+        s_col = (
+            df_c["section"].str.lower()
+            if "section" in df_c.columns
+            else pd.Series("", index=df_c.index)
+        )
+        mask = mask & s_col.str.contains(
+            section_hint.lower(), na=False, regex=False
+        )
+    if exclude:
+        for ex in exclude:
+            mask = mask & ~ind_lower.str.contains(
+                ex.lower(), na=False, regex=False
+            )
+    return df_c[mask]
+
+
+def _get_val_for_year(df_ind, year):
+    """Get the first numeric value for a specific year_num."""
+    sub = df_ind[df_ind["year_num"] == year]
+    if sub.empty:
+        return None
+    vals = sub["value"].dropna()
+    return float(vals.iloc[0]) if not vals.empty else None
+
+
+def _compute_3yr_avg(df_ind, cy):
+    """Compute 3-year centred average: (cy-1, cy, cy+1)."""
+    vals = []
+    for y in [cy - 1, cy, cy + 1]:
+        v = _get_val_for_year(df_ind, y)
+        if v is not None:
+            vals.append(v)
+    return float(np.mean(vals)) if vals else None
+
+
+def extract_brazil_srm_from_comparator(df, center_year=2025):
+    """Extract SRM-ready values for Brazil from parsed Fitch Comparator.
+
+    Timing (Appendix 1, footnote a):
+      Jan-Jun committees -> center on previous year.
+      Jul-Dec committees -> center on current year.
+    """
+    logs = []
+    result = {}
+
+    df_brazil = df[
+        (df["country_name"].str.contains("Brazil", case=False, na=False))
+        & (df["entity_type"] == "COUNTRY")
+    ]
+    if df_brazil.empty:
+        logs.append("Brasil nao encontrado no DataFrame.")
+        return result, logs
+    logs.append(
+        f"Brasil: {len(df_brazil)} registros. Ano central: {center_year}"
+    )
+
+    df_countries = df[df["entity_type"] == "COUNTRY"]
+
+    for var_key, cfg in SRM_XLSB_MAP.items():
+        special = cfg.get("special")
+        measure = cfg["measure"]
+        transform = cfg.get("transform")
+
+        # ── Special: WGI composite ──────────────────────────
+        if special == "wgi_composite":
+            wgi = df_brazil[
+                df_brazil["section"].str.contains(
+                    "GOVERNANCE", case=False, na=False
+                )
+            ]
+            if wgi.empty:
+                wgi = df_brazil[
+                    df_brazil["unit"].str.contains(
+                        "p-tile|p.tile|percentile",
+                        case=False, na=False, regex=True,
+                    )
+                ]
+            if wgi.empty:
+                wgi = df_brazil[
+                    df_brazil["indicator"].str.contains(
+                        "governance|WGI",
+                        case=False, na=False, regex=True,
+                    )
+                ]
+            if not wgi.empty:
+                wy = wgi[wgi["year_num"] == center_year]
+                if wy.empty:
+                    wy = wgi[wgi["year_num"] == center_year - 1]
+                if not wy.empty:
+                    wv = wy["value"].dropna()
+                    if not wv.empty:
+                        composite = float(wv.mean())
+                        result[var_key] = composite
+                        logs.append(
+                            f"OK {var_key} = {composite:.2f} "
+                            f"(media de {len(wv)} sub-indicadores WGI)"
+                        )
+                        continue
+            logs.append(f"WARN {var_key}: WGI nao encontrado")
+            continue
+
+        # ── Standard indicator search ───────────────────────
+        patterns = cfg.get("indicators", [])
+        unit_hint = cfg.get("unit_hint")
+        section_hint = cfg.get("section_hint")
+        exclude = cfg.get("exclude")
+
+        matched = _find_indicator_rows(
+            df_brazil, patterns, unit_hint, section_hint, exclude
+        )
+        if matched.empty and unit_hint:
+            matched = _find_indicator_rows(
+                df_brazil, patterns, None, section_hint, exclude
+            )
+            if not matched.empty:
+                logs.append(
+                    f"INFO {var_key}: encontrado sem filtro de unidade"
+                )
+        if matched.empty:
+            logs.append(f"WARN {var_key}: nao encontrado ({patterns})")
+            continue
+
+        # ── Extract raw value ───────────────────────────────
+        if measure == "latest":
+            raw = _get_val_for_year(matched, center_year)
+            if raw is None:
+                raw = _get_val_for_year(matched, center_year - 1)
+            if raw is None:
+                raw = _get_val_for_year(matched, center_year + 1)
+        else:
+            raw = _compute_3yr_avg(matched, center_year)
+
+        if raw is None:
+            logs.append(f"WARN {var_key}: sem dados p/ ano {center_year}")
+            continue
+
+        # ── Apply transform ─────────────────────────────────
+        if transform == "log":
+            if raw > 0:
+                final = float(math.log(raw))
+            else:
+                logs.append(
+                    f"WARN {var_key}: valor <= 0 ({raw}), log impossivel"
+                )
+                continue
+        elif transform == "truncate_2_50":
+            final = float(min(50.0, max(2.0, raw)))
+        elif transform == "percentile_rank":
+            am = _find_indicator_rows(
+                df_countries, patterns, unit_hint,
+                section_hint, exclude,
+            )
+            if am.empty and unit_hint:
+                am = _find_indicator_rows(
+                    df_countries, patterns, None,
+                    section_hint, exclude,
+                )
+            ay = am[am["year_num"] == center_year]
+            if ay.empty:
+                ay = am[am["year_num"] == center_year - 1]
+            av = ay.drop_duplicates("country_name")["value"].dropna()
+            if not av.empty:
+                final = float((av <= raw).sum() / len(av) * 100)
+            else:
+                logs.append(
+                    f"WARN {var_key}: sem cross-country p/ percentile"
+                )
+                continue
+        elif transform == "world_gdp_share_log":
+            am = _find_indicator_rows(
+                df_countries, patterns, unit_hint,
+                section_hint, exclude,
+            )
+            if am.empty and unit_hint:
+                am = _find_indicator_rows(
+                    df_countries, patterns, None,
+                    section_hint, exclude,
+                )
+            ay = am[am["year_num"] == center_year]
+            if ay.empty:
+                ay = am[am["year_num"] == center_year - 1]
+            av = ay.drop_duplicates("country_name")["value"].dropna()
+            if not av.empty and av.sum() > 0:
+                share_pct = raw / av.sum() * 100
+                if share_pct > 0:
+                    final = float(math.log(share_pct))
+                else:
+                    logs.append(f"WARN {var_key}: share = 0")
+                    continue
+            else:
+                logs.append(
+                    f"WARN {var_key}: sem cross-country p/ world GDP"
+                )
+                continue
+        else:
+            final = float(raw)
+
+        result[var_key] = final
+        logs.append(f"OK {var_key} = {final:.4f} (raw={raw:.4f})")
+
+    logs.append(f"TOTAL: {len(result)}/18 variaveis extraidas")
+    return result, logs
+
+
+def apply_brazil_data_to_session(srm_values):
+    """Update Streamlit session_state with extracted SRM values."""
+    for key, val in srm_values.items():
+        st.session_state[key] = float(val)
+
+
+
+# ============================================================
 # Helpers gerais
 # ============================================================
 
@@ -1116,6 +1435,64 @@ def render_fitch():
                 f"{comparator_df['country_name'].nunique()} entidades · "
                 f"{comparator_df['indicator'].nunique()} indicadores"
             )
+            # -- Auto-preenchimento Brasil -----
+            st.sidebar.markdown("---")
+            st.sidebar.subheader("Auto-preenchimento SRM (Brasil)")
+            _ca, _cb = st.sidebar.columns(2)
+            with _ca:
+                _cyr = st.number_input(
+                    "Ano central", value=2025,
+                    min_value=2015, max_value=2030, step=1,
+                    key="srm_center_year",
+                    help="Jan-Jun: ano anterior. Jul-Dez: ano corrente.",
+                )
+            with _cb:
+                st.markdown("<br>", unsafe_allow_html=True)
+                _do_auto = st.button(
+                    "Auto-preencher", key="btn_auto_brazil",
+                )
+            if _do_auto:
+                _sv, _lg = extract_brazil_srm_from_comparator(
+                    comparator_df, center_year=int(_cyr),
+                )
+                if _sv:
+                    apply_brazil_data_to_session(_sv)
+                    st.session_state["_brazil_auto_filled"] = True
+                    st.session_state["_brazil_auto_log"] = _lg
+                    st.session_state["_brazil_auto_vals"] = _sv
+                    st.rerun()
+            if st.session_state.get("_brazil_auto_filled"):
+                with st.sidebar.expander(
+                    "Valores extraidos", expanded=False,
+                ):
+                    _vals = st.session_state.get(
+                        "_brazil_auto_vals", {},
+                    )
+                    if _vals:
+                        _rws = []
+                        for _k, _v in _vals.items():
+                            _lb = _k
+                            for _pl in SRM_VARIABLES.values():
+                                if _k in _pl:
+                                    _lb = _pl[_k]["label"]
+                                    break
+                            _rws.append({
+                                "Variavel": _lb,
+                                "Valor": round(_v, 4),
+                            })
+                        st.dataframe(
+                            pd.DataFrame(_rws),
+                            use_container_width=True,
+                            hide_index=True,
+                        )
+                    _lgs = st.session_state.get(
+                        "_brazil_auto_log", [],
+                    )
+                    if _lgs:
+                        st.caption("Log de extracao:")
+                        for _l in _lgs:
+                            st.text(_l)
+
         else:
             st.sidebar.error("Não foi possível extrair dados do arquivo.")
 
@@ -1210,3 +1587,4 @@ def render_fitch():
                 df_table = df_table[df_table["country_name"].isin(sel_countries_tbl)]
 
             render_comparator_table(df_table)
+
