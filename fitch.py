@@ -369,11 +369,9 @@ def extract_country_srm_from_comparator(df, country_name, center_year=2025):
         if special == "wgi_composite":
             wgi = df_country[df_country["section"].str.contains("GOVERNANCE", case=False, na=False)]
             if wgi.empty:
-                wgi = df_country[df_country["unit"].str.contains(
-                    "p-tile|p.tile|percentile", case=False, na=False, regex=True)]
+                wgi = df_country[df_country["unit"].str.contains("p-tile|p.tile|percentile", case=False, na=False, regex=True)]
             if wgi.empty:
-                wgi = df_country[df_country["indicator"].str.contains(
-                    "governance|WGI", case=False, na=False, regex=True)]
+                wgi = df_country[df_country["indicator"].str.contains("governance|WGI", case=False, na=False, regex=True)]
             if not wgi.empty:
                 raw = _resolve_value(wgi, "latest", center_year)
                 if raw is not None:
@@ -445,8 +443,9 @@ def extract_country_srm_from_comparator(df, country_name, center_year=2025):
 
 
 def apply_country_data_to_session(srm_values):
+    data = st.session_state.setdefault("_srm_data", {})
     for key, val in srm_values.items():
-        st.session_state[key] = float(val)
+        data[key] = float(val)
 
 
 # ============================================================
@@ -548,23 +547,24 @@ def approx_years_since_default_transform(years_since_event=None, no_event_since_
 
 
 def safe_number_input(var_key, label, default, help_text):
+    data = st.session_state["_srm_data"]
+    current = data.get(var_key, default)
     rule = VARIABLE_RULES.get(var_key, {"step": 0.1})
-    kwargs = dict(
-        label=label,
+    val = st.number_input(
+        label, value=float(current),
         step=float(rule.get("step", 0.1)),
-        key=var_key,
         help=help_text,
     )
-    if var_key not in st.session_state:
-        kwargs["value"] = float(default)
-    return st.number_input(**kwargs)
+    data[var_key] = float(val)
+    return val
 
 
 def get_clean_srm_inputs():
+    data = st.session_state.get("_srm_data", {})
     inputs = {}
     for pillar in SRM_VARIABLES.values():
         for k in pillar.keys():
-            v = float(st.session_state.get(k, 0.0))
+            v = float(data.get(k, 0.0))
             if k == "consumer_price_inflation":
                 v = min(50.0, max(2.0, v))
             inputs[k] = v
@@ -608,35 +608,38 @@ def build_radar(srm_score, qo_total, final_score):
 # ============================================================
 
 def init_state():
-    defaults = {
-        "governance_indicator": 50.0,
-        "gdp_per_capita_percentile": 50.0,
-        "share_world_gdp_log": -4.0,
-        "years_since_default_transform": 0.0,
-        "money_supply_log": math.log(60.0),
-        "real_gdp_growth_volatility_log": math.log(3.0),
-        "consumer_price_inflation": 4.0,
-        "real_gdp_growth": 3.0,
-        "gross_general_govt_debt": 60.0,
-        "general_govt_interest_revenue": 8.0,
-        "general_govt_fiscal_balance": -3.0,
-        "fc_govt_debt_share": 35.0,
-        "reserve_currency_flexibility": 0.0,
-        "sovereign_net_foreign_assets": -20.0,
-        "commodity_dependence": 25.0,
-        "fx_reserves_months_cxp": 4.0,
-        "external_interest_service": 8.0,
-        "cab_plus_net_fdi": -1.0,
-        "qo_structural": 0,
-        "qo_macro": 0,
-        "qo_public_finances": 0,
-        "qo_external": 0,
-        "qo_crisis_extension": False,
-        "lc_manual_adjust": 0,
-        "fc_robust_liquidity": False,
-    }
-    for k, v in defaults.items():
-        st.session_state.setdefault(k, v)
+    # Persistent dicts – never cleared by widget lifecycle
+    if "_srm_data" not in st.session_state:
+        st.session_state["_srm_data"] = {
+            "governance_indicator": 50.0,
+            "gdp_per_capita_percentile": 50.0,
+            "share_world_gdp_log": -4.0,
+            "years_since_default_transform": 0.0,
+            "money_supply_log": math.log(60.0),
+            "real_gdp_growth_volatility_log": math.log(3.0),
+            "consumer_price_inflation": 4.0,
+            "real_gdp_growth": 3.0,
+            "gross_general_govt_debt": 60.0,
+            "general_govt_interest_revenue": 8.0,
+            "general_govt_fiscal_balance": -3.0,
+            "fc_govt_debt_share": 35.0,
+            "reserve_currency_flexibility": 0.0,
+            "sovereign_net_foreign_assets": -20.0,
+            "commodity_dependence": 25.0,
+            "fx_reserves_months_cxp": 4.0,
+            "external_interest_service": 8.0,
+            "cab_plus_net_fdi": -1.0,
+        }
+    if "_qo_data" not in st.session_state:
+        st.session_state["_qo_data"] = {
+            "qo_structural": 0,
+            "qo_macro": 0,
+            "qo_public_finances": 0,
+            "qo_external": 0,
+        }
+    st.session_state.setdefault("_qo_crisis", False)
+    st.session_state.setdefault("_lc_adjust", 0)
+    st.session_state.setdefault("_fc_robust", False)
 
 
 # ============================================================
@@ -1234,10 +1237,11 @@ O score do SRM mapeia para a escala de rating usando arredondamento:
 def render_methodology_pillar(pillar_key):
     st.subheader(PILLAR_LABELS[pillar_key])
     st.caption("Insira os valores SRM-ready para este pilar.")
+    data = st.session_state["_srm_data"]
     rows = []
     for var_key, meta in SRM_VARIABLES[pillar_key].items():
         value_raw = safe_number_input(var_key, meta["label"],
-            st.session_state.get(var_key, 0.0), meta["help"])
+            data.get(var_key, 0.0), meta["help"])
         contribution = float(value_raw) * float(meta["coefficient"])
         rows.append({
             "Variável": meta["label"], "Valor": value_raw,
@@ -1247,28 +1251,39 @@ def render_methodology_pillar(pillar_key):
     rdf = pd.DataFrame(rows)
     st.dataframe(rdf, use_container_width=True, hide_index=True)
     st.metric("Subtotal do pilar", f"{rdf['Contribuição'].sum():.3f}")
+    # ── QO for this pillar ──
+    st.markdown("---")
+    st.markdown("#### Qualitative Overlay (QO)")
+    qo_key = f"qo_{pillar_key}"
+    qo_data = st.session_state["_qo_data"]
+    current_qo = qo_data.get(qo_key, 0)
+    qo_opts = list(QO_GUIDANCE.keys())
+    cur_idx = qo_opts.index(current_qo) if current_qo in qo_opts else 2
+    new_qo = st.selectbox(
+        f"QO – {PILLAR_LABELS[pillar_key]}",
+        options=qo_opts, index=cur_idx,
+        format_func=lambda x: f"{x:+d}  —  {QO_GUIDANCE[x]}",
+    )
+    qo_data[qo_key] = new_qo
+    if pillar_key in QO_FACTORS:
+        with st.expander("Fatores considerados"):
+            for fct in QO_FACTORS[pillar_key]:
+                st.write(f"- {fct}")
 
 
 def render_methodology_qo():
-    st.subheader("Qualitative Overlay (QO)")
-    st.caption("Ajuste qualitativo por pilar analítico. Cap típico: ±3 notches no total.")
-    for pillar_key, factors in QO_FACTORS.items():
-        st.markdown(f"#### {PILLAR_LABELS[pillar_key]}")
-        qo_key = f"qo_{pillar_key}"
-        _qo_opts = list(QO_GUIDANCE.keys())
-        _qo_kw = dict(
-            label=f"QO – {PILLAR_LABELS[pillar_key]}",
-            options=_qo_opts,
-            format_func=lambda x: f"{x:+d}  —  {QO_GUIDANCE[x]}",
-            key=qo_key,
-        )
-        if qo_key not in st.session_state:
-            _qo_kw["index"] = 2
-        st.selectbox(**_qo_kw)
-        with st.expander("Fatores considerados"):
-            for f in factors:
-                st.write(f"- {f}")
-    st.checkbox("Crisis extension (permite QO fora de ±3)", key="qo_crisis_extension")
+    st.subheader("Qualitative Overlay (QO) – Resumo")
+    st.caption("Os ajustes QO por pilar estão dentro de cada seção de pilar. Aqui, apenas a opção de extensão de crise.")
+    qo_data = st.session_state.get("_qo_data", {})
+    for pk in ["structural", "macro", "public_finances", "external"]:
+        v = qo_data.get(f"qo_{pk}", 0)
+        st.write(f"- **{PILLAR_LABELS[pk]}**: {v:+d}")
+    st.markdown("---")
+    crisis = st.checkbox(
+        "Crisis extension (permite QO fora de ±3)",
+        value=bool(st.session_state.get("_qo_crisis", False)),
+    )
+    st.session_state["_qo_crisis"] = crisis
 
 
 def render_methodology_results():
@@ -1276,20 +1291,21 @@ def render_methodology_results():
     inputs = get_clean_srm_inputs()
     srm_score, details = compute_srm(inputs)
 
+    qo_data = st.session_state.get("_qo_data", {})
     adjustments = {
-        "structural": int(st.session_state.get("qo_structural", 0)),
-        "macro": int(st.session_state.get("qo_macro", 0)),
-        "public_finances": int(st.session_state.get("qo_public_finances", 0)),
-        "external": int(st.session_state.get("qo_external", 0)),
+        "structural": int(qo_data.get("qo_structural", 0)),
+        "macro": int(qo_data.get("qo_macro", 0)),
+        "public_finances": int(qo_data.get("qo_public_finances", 0)),
+        "external": int(qo_data.get("qo_external", 0)),
     }
-    crisis_ext = bool(st.session_state.get("qo_crisis_extension", False))
+    crisis_ext = bool(st.session_state.get("_qo_crisis", False))
     qo_total = clamp_qo(adjustments, crisis_ext)
     final_score = srm_score + qo_total
 
     lt_fc_idr = score_to_lt_rating(final_score)
-    lc_adjust = int(st.session_state.get("lc_manual_adjust", 0))
+    lc_adjust = int(st.session_state.get("_lc_adjust", 0))
     lt_lc_idr = apply_notches(lt_fc_idr, -lc_adjust)
-    fc_robust = bool(st.session_state.get("fc_robust_liquidity", False))
+    fc_robust = bool(st.session_state.get("_fc_robust", False))
     st_fc_idr = map_short_term(lt_fc_idr, fc_robust)
     st_lc_idr = map_short_term(lt_lc_idr, True)
 
@@ -1304,14 +1320,23 @@ def render_methodology_results():
     r3.metric("ST FC IDR", st_fc_idr)
     r4.metric("ST LC IDR", st_lc_idr)
     st.divider()
-    _lc_kw = dict(
-        label="LC notch adjustment vs FC (positivo = LC acima do FC)",
-        min_value=-3, max_value=6, step=1, key="lc_manual_adjust",
+    new_lc = st.number_input(
+        "LC notch adjustment vs FC (positivo = LC acima do FC)",
+        min_value=-3, max_value=6,
+        value=int(st.session_state.get("_lc_adjust", 0)),
+        step=1,
     )
-    if "lc_manual_adjust" not in st.session_state:
-        _lc_kw["value"] = lc_adjust
-    st.number_input(**_lc_kw)
-    st.checkbox("FC: robust external liquidity (higher ST mapping)", key="fc_robust_liquidity")
+    st.session_state["_lc_adjust"] = new_lc
+    new_fc = st.checkbox(
+        "FC: robust external liquidity (higher ST mapping)",
+        value=bool(st.session_state.get("_fc_robust", False)),
+    )
+    st.session_state["_fc_robust"] = new_fc
+    crisis = st.checkbox(
+        "Crisis extension (permite QO fora de ±3)",
+        value=bool(st.session_state.get("_qo_crisis", False)),
+    )
+    st.session_state["_qo_crisis"] = crisis
     st.plotly_chart(build_radar(srm_score, qo_total, final_score), use_container_width=True)
     with st.expander("📋 Detalhes do SRM"):
         det_df = pd.DataFrame(details)
@@ -1355,77 +1380,39 @@ def render_fitch():
                 f"{comparator_df['indicator'].nunique()} indicadores"
             )
 
-            # -- Auto-preenchimento SRM ----------------------------
+            # -- Auto-preenchimento SRM ---
             st.sidebar.markdown('---')
             st.sidebar.subheader('Auto-preenchimento SRM')
             _countries = sorted(
-                comparator_df[
-                    comparator_df["entity_type"] == "COUNTRY"
-                ]["country_name"].dropna().unique().tolist()
+                comparator_df[comparator_df["entity_type"] == "COUNTRY"]["country_name"].dropna().unique().tolist()
             )
             _def_idx = 0
             for _i, _c in enumerate(_countries):
                 if _c.lower() == "brazil":
                     _def_idx = _i
                     break
-            _sel_country = st.sidebar.selectbox(
-                "Pais", _countries, index=_def_idx,
-                key="srm_country_select",
-            )
-            _ca, _cb = st.sidebar.columns(2)
-            with _ca:
-                _cyr = st.number_input(
-                    "Ano central", value=2025,
-                    min_value=2015, max_value=2030, step=1,
-                    key="srm_center_year",
-                    help="Jan-Jun: ano anterior. Jul-Dez: ano corrente.",
-                )
-            with _cb:
-                st.markdown("<br>", unsafe_allow_html=True)
-                _do_auto = st.button(
-                    "Auto-preencher", key="btn_auto_srm",
-                )
-            if _do_auto:
-                _sv, _lg = extract_country_srm_from_comparator(
-                    comparator_df,
-                    country_name=_sel_country,
-                    center_year=int(_cyr),
-                )
+            _sel_country = st.sidebar.selectbox("Pais", _countries, index=_def_idx, key="srm_country_select")
+            _cyr = st.sidebar.number_input("Ano central", value=2025, min_value=2015, max_value=2030, step=1, key="srm_center_year")
+            if st.sidebar.button("Auto-preencher", key="btn_auto_srm"):
+                _sv, _lg = extract_country_srm_from_comparator(comparator_df, _sel_country, int(_cyr))
                 if _sv:
                     apply_country_data_to_session(_sv)
                     st.session_state["_srm_auto_filled"] = True
                     st.session_state["_srm_auto_log"] = _lg
                     st.session_state["_srm_auto_vals"] = _sv
                     st.session_state["_srm_auto_country"] = _sel_country
-                    st.rerun()
             if st.session_state.get("_srm_auto_filled"):
                 _acn = st.session_state.get("_srm_auto_country", "")
-                with st.sidebar.expander(
-                    f"Valores extraidos ({_acn})", expanded=False,
-                ):
+                with st.sidebar.expander(f"Valores ({_acn})", expanded=False):
                     _vals = st.session_state.get("_srm_auto_vals", {})
                     if _vals:
-                        _rws = []
-                        for _k, _v in _vals.items():
-                            _lb = _k
-                            for _pl in SRM_VARIABLES.values():
-                                if _k in _pl:
-                                    _lb = _pl[_k]["label"]
-                                    break
-                            _rws.append({
-                                "Variavel": _lb,
-                                "Valor": round(_v, 4),
-                            })
-                        st.dataframe(
-                            pd.DataFrame(_rws),
-                            use_container_width=True,
-                            hide_index=True,
-                        )
+                        _rws = [{"Var": _k, "Val": round(_v, 4)} for _k, _v in _vals.items()]
+                        st.dataframe(pd.DataFrame(_rws), use_container_width=True, hide_index=True)
                     _lgs = st.session_state.get("_srm_auto_log", [])
                     if _lgs:
-                        st.caption("Log:")
                         for _l in _lgs:
                             st.text(_l)
+
         else:
             st.sidebar.error("Não foi possível extrair dados do arquivo.")
 
@@ -1439,9 +1426,7 @@ def render_fitch():
     # ========== TAB 1: Metodologia ==========
     with tab_met:
         st.title("Fitch Sovereign Rating Methodology")
-        sub_page = st.selectbox(
-            "Seção",
-            [
+        _nav_opts = [
                 "Visão geral",
                 PILLAR_LABELS["structural"],
                 PILLAR_LABELS["macro"],
@@ -1449,9 +1434,14 @@ def render_fitch():
                 PILLAR_LABELS["external"],
                 "Qualitative Overlay (QO)",
                 "Resultados",
-            ],
-            key="met_subpage", label_visibility="collapsed",
+            ]
+        _cur_nav = st.session_state.get("_nav_page", "Visão geral")
+        _nav_idx = _nav_opts.index(_cur_nav) if _cur_nav in _nav_opts else 0
+        sub_page = st.selectbox(
+            "Seção", _nav_opts, index=_nav_idx,
+            label_visibility="collapsed",
         )
+        st.session_state["_nav_page"] = sub_page
         if sub_page == "Visão geral":
             render_methodology_overview()
         elif sub_page == PILLAR_LABELS["structural"]:
