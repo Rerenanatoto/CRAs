@@ -232,96 +232,28 @@ VARIABLE_RULES = {
 # ============================================================
 
 SRM_XLSB_MAP = {
-    "governance_indicator": {
-        "indicators": [], "measure": "latest", "transform": None,
-        "special": "wgi_composite",
-    },
-    "gdp_per_capita_percentile": {
-        "indicators": ["GDP per cap"], "unit_hint": None,
-        "section_hint": "INCOME", "measure": "latest",
-        "transform": "percentile_rank",
-    },
-    "share_world_gdp_log": {
-        "indicators": ["GDP"], "unit_hint": "USDbn",
-        "section_hint": "DOMESTIC",
-        "exclude": ["per cap", "real", "volat", "growth"],
-        "measure": "latest", "transform": "world_gdp_share_log",
-    },
-    "years_since_default_transform": {
-        "indicators": ["SRM-inverse", "SRM inverse", "yrs since"],
-        "measure": "latest", "transform": None,
-    },
-    "money_supply_log": {
-        "indicators": ["Broad money"], "unit_hint": "% GDP",
-        "section_hint": "MONEY",
-        "measure": "latest", "transform": "log",
-    },
-    "real_gdp_growth_volatility_log": {
-        "indicators": ["GDP volat"], "unit_hint": "Exp mov",
-        "measure": "latest", "transform": "log",
-    },
-    "consumer_price_inflation": {
-        "indicators": ["Consumer price", "Consumer prices"],
-        "section_hint": "DOMESTIC",
-        "measure": "3yr_avg", "transform": "truncate_2_50",
-    },
-    "real_gdp_growth": {
-        "indicators": ["Real GDP growth"], "section_hint": "DOMESTIC",
-        "exclude": ["volat"],
-        "measure": "3yr_avg", "transform": None,
-    },
-    "gross_general_govt_debt": {
-        "indicators": ["GG debt"], "unit_hint": "% GDP",
-        "section_hint": "GOVERNMENT", "exclude": ["mat", "% rev"],
-        "measure": "3yr_avg", "transform": None,
-    },
-    "general_govt_interest_revenue": {
-        "indicators": ["GG int"], "unit_hint": "% rev",
-        "section_hint": "GOVERNMENT",
-        "measure": "3yr_avg", "transform": None,
-    },
-    "general_govt_fiscal_balance": {
-        "indicators": ["GG balance"], "unit_hint": "% GDP",
-        "section_hint": "GOVERNMENT",
-        "measure": "3yr_avg", "transform": None,
-    },
-    "fc_govt_debt_share": {
-        "indicators": ["Public FC", "Foreign own-p", "FC govt"],
-        "measure": "3yr_avg", "transform": None,
-    },
-    "reserve_currency_flexibility": {
-        "indicators": ["SRM-reserve", "SRM reserve"],
-        "measure": "latest", "transform": None,
-    },
-    "sovereign_net_foreign_assets": {
-        "indicators": ["SNFA", "Sovereign net foreign"],
-        "unit_hint": "% GDP",
-        "measure": "3yr_avg", "transform": None,
-    },
-    "commodity_dependence": {
-        "indicators": ["Comm. dep", "Commodity dep", "commodity depend"],
-        "measure": "latest", "transform": None,
-    },
-    "fx_reserves_months_cxp": {
-        "indicators": ["Reserves", "FX reserves"],
-        "unit_hint": "months",
-        "measure": "latest", "transform": None,
-    },
-    "external_interest_service": {
-        "indicators": ["Ext. int", "External interest"],
-        "unit_hint": "% CXR", "exclude": ["% GDP"],
-        "measure": "3yr_avg", "transform": None,
-    },
-    "cab_plus_net_fdi": {
-        "indicators": ["CAB+Net FDI", "CAB + Net FDI", "CAB+net FDI"],
-        "unit_hint": "% GDP",
-        "measure": "3yr_avg", "transform": None,
-    },
+    "governance_indicator": {"indicators": [], "measure": "latest", "transform": None, "special": "wgi_composite"},
+    "gdp_per_capita_percentile": {"indicators": ["GDP per cap"], "unit_hint": None, "section_hint": "INCOME", "measure": "latest", "transform": "percentile_rank"},
+    "share_world_gdp_log": {"indicators": ["GDP"], "unit_hint": "USDbn", "section_hint": "DOMESTIC", "exclude": ["per cap", "real", "volat", "growth"], "measure": "latest", "transform": "world_gdp_share_log"},
+    "years_since_default_transform": {"indicators": ["SRM-inverse", "SRM inverse", "yrs since"], "measure": "latest", "transform": None},
+    "money_supply_log": {"indicators": ["Broad money"], "unit_hint": "% GDP", "section_hint": "MONEY", "measure": "latest", "transform": "log"},
+    "real_gdp_growth_volatility_log": {"indicators": ["GDP volat"], "unit_hint": "Exp mov", "measure": "latest", "transform": "log"},
+    "consumer_price_inflation": {"indicators": ["Consumer price", "Consumer prices"], "section_hint": "DOMESTIC", "measure": "3yr_avg", "transform": "truncate_2_50"},
+    "real_gdp_growth": {"indicators": ["Real GDP growth"], "section_hint": "DOMESTIC", "exclude": ["volat"], "measure": "3yr_avg", "transform": None},
+    "gross_general_govt_debt": {"indicators": ["GG debt"], "unit_hint": "% GDP", "section_hint": "GOVERNMENT", "exclude": ["mat", "% rev"], "measure": "3yr_avg", "transform": None},
+    "general_govt_interest_revenue": {"indicators": ["GG int"], "unit_hint": "% rev", "section_hint": "GOVERNMENT", "measure": "3yr_avg", "transform": None},
+    "general_govt_fiscal_balance": {"indicators": ["GG balance"], "unit_hint": "% GDP", "section_hint": "GOVERNMENT", "measure": "3yr_avg", "transform": None},
+    "fc_govt_debt_share": {"indicators": ["Public FC", "Foreign own-p", "FC govt"], "measure": "3yr_avg", "transform": None},
+    "reserve_currency_flexibility": {"indicators": ["SRM-reserve", "SRM reserve"], "measure": "latest", "transform": None},
+    "sovereign_net_foreign_assets": {"indicators": ["SNFA", "Sovereign net foreign"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
+    "commodity_dependence": {"indicators": ["Comm. dep", "Commodity dep", "commodity depend"], "measure": "latest", "transform": None},
+    "fx_reserves_months_cxp": {"indicators": ["Reserves", "FX reserves"], "unit_hint": "months", "measure": "latest", "transform": None},
+    "external_interest_service": {"indicators": ["Ext. int", "External interest"], "unit_hint": "% CXR", "exclude": ["% GDP"], "measure": "3yr_avg", "transform": None},
+    "cab_plus_net_fdi": {"indicators": ["CAB+Net FDI", "CAB + Net FDI", "CAB+net FDI"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
 }
 
 
-def _find_indicator_rows(df_c, patterns, unit_hint=None,
-                         section_hint=None, exclude=None):
+def _find_indicator_rows(df_c, patterns, unit_hint=None, section_hint=None, exclude=None):
     if df_c.empty or not patterns:
         return pd.DataFrame()
     mask = pd.Series(False, index=df_c.index)
@@ -329,13 +261,11 @@ def _find_indicator_rows(df_c, patterns, unit_hint=None,
     for pat in patterns:
         mask = mask | ind_lower.str.contains(pat.lower(), na=False, regex=False)
     if unit_hint:
-        u_col = (df_c["unit"].str.lower() if "unit" in df_c.columns
-                 else pd.Series("", index=df_c.index))
-        mask = mask & u_col.str.contains(unit_hint.lower(), na=False, regex=False)
+        u = df_c["unit"].str.lower() if "unit" in df_c.columns else pd.Series("", index=df_c.index)
+        mask = mask & u.str.contains(unit_hint.lower(), na=False, regex=False)
     if section_hint:
-        s_col = (df_c["section"].str.lower() if "section" in df_c.columns
-                 else pd.Series("", index=df_c.index))
-        mask = mask & s_col.str.contains(section_hint.lower(), na=False, regex=False)
+        s = df_c["section"].str.lower() if "section" in df_c.columns else pd.Series("", index=df_c.index)
+        mask = mask & s.str.contains(section_hint.lower(), na=False, regex=False)
     if exclude:
         for ex in exclude:
             mask = mask & ~ind_lower.str.contains(ex.lower(), na=False, regex=False)
@@ -437,9 +367,7 @@ def extract_country_srm_from_comparator(df, country_name, center_year=2025):
         measure = cfg["measure"]
         transform = cfg.get("transform")
         if special == "wgi_composite":
-            wgi = df_country[
-                df_country["section"].str.contains("GOVERNANCE", case=False, na=False)
-            ]
+            wgi = df_country[df_country["section"].str.contains("GOVERNANCE", case=False, na=False)]
             if wgi.empty:
                 wgi = df_country[df_country["unit"].str.contains(
                     "p-tile|p.tile|percentile", case=False, na=False, regex=True)]
@@ -621,10 +549,15 @@ def approx_years_since_default_transform(years_since_event=None, no_event_since_
 
 def safe_number_input(var_key, label, default, help_text):
     rule = VARIABLE_RULES.get(var_key, {"step": 0.1})
-    return st.number_input(
-        label, value=float(default), step=float(rule.get("step", 0.1)),
-        key=var_key, help=help_text,
+    kwargs = dict(
+        label=label,
+        step=float(rule.get("step", 0.1)),
+        key=var_key,
+        help=help_text,
     )
+    if var_key not in st.session_state:
+        kwargs["value"] = float(default)
+    return st.number_input(**kwargs)
 
 
 def get_clean_srm_inputs():
@@ -1322,10 +1255,16 @@ def render_methodology_qo():
     for pillar_key, factors in QO_FACTORS.items():
         st.markdown(f"#### {PILLAR_LABELS[pillar_key]}")
         qo_key = f"qo_{pillar_key}"
-        st.selectbox(f"QO – {PILLAR_LABELS[pillar_key]}",
-            options=list(QO_GUIDANCE.keys()),
+        _qo_opts = list(QO_GUIDANCE.keys())
+        _qo_kw = dict(
+            label=f"QO – {PILLAR_LABELS[pillar_key]}",
+            options=_qo_opts,
             format_func=lambda x: f"{x:+d}  —  {QO_GUIDANCE[x]}",
-            key=qo_key, index=2)
+            key=qo_key,
+        )
+        if qo_key not in st.session_state:
+            _qo_kw["index"] = 2
+        st.selectbox(**_qo_kw)
         with st.expander("Fatores considerados"):
             for f in factors:
                 st.write(f"- {f}")
@@ -1365,8 +1304,13 @@ def render_methodology_results():
     r3.metric("ST FC IDR", st_fc_idr)
     r4.metric("ST LC IDR", st_lc_idr)
     st.divider()
-    st.number_input("LC notch adjustment vs FC (positivo = LC acima do FC)",
-        min_value=-3, max_value=6, value=lc_adjust, step=1, key="lc_manual_adjust")
+    _lc_kw = dict(
+        label="LC notch adjustment vs FC (positivo = LC acima do FC)",
+        min_value=-3, max_value=6, step=1, key="lc_manual_adjust",
+    )
+    if "lc_manual_adjust" not in st.session_state:
+        _lc_kw["value"] = lc_adjust
+    st.number_input(**_lc_kw)
     st.checkbox("FC: robust external liquidity (higher ST mapping)", key="fc_robust_liquidity")
     st.plotly_chart(build_radar(srm_score, qo_total, final_score), use_container_width=True)
     with st.expander("📋 Detalhes do SRM"):
@@ -1410,9 +1354,10 @@ def render_fitch():
                 f"{comparator_df['country_name'].nunique()} entidades · "
                 f"{comparator_df['indicator'].nunique()} indicadores"
             )
+
             # -- Auto-preenchimento SRM ----------------------------
-            st.sidebar.markdown("---")
-            st.sidebar.subheader("Auto-preenchimento SRM")
+            st.sidebar.markdown('---')
+            st.sidebar.subheader('Auto-preenchimento SRM')
             _countries = sorted(
                 comparator_df[
                     comparator_df["entity_type"] == "COUNTRY"
