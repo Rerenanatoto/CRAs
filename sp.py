@@ -1323,6 +1323,20 @@ def render_methodology_tab():
             f"Inconsistência de dados: {adj_data:+d}"
         )
         st.caption(f"Total de ajuste aplicado (limitado a ±2): {total_adj:+d}")
+        st.markdown("---")
+        st.markdown("#### Resultado acumulado")
+        _ie_inst = int(st.session_state.get("institutional", 4))
+        _ie_profile = (_ie_inst + final_score) / 2.0
+        _fp_ext = int(st.session_state.get("external", 3))
+        _fp_fis = float(st.session_state.get("fiscal", 4.0))
+        _fp_mon = float(st.session_state.get("monetary", 3.0))
+        _fp_profile = (_fp_ext + _fp_fis + _fp_mon) / 3.0
+        _ec1, _ec2, _ec3 = st.columns(3)
+        _ec1.metric("Economic (este pilar)", final_score)
+        _ec2.metric("Institutional (outra seção)", _ie_inst)
+        _ec3.metric("IE Profile (acumulado)", f"{_ie_profile:.2f}")
+        _ind_eco = indicative_from_matrix(_ie_profile, _fp_profile)
+        st.caption(f"FP Profile (outras seções): {_fp_profile:.2f} → Indicativo estimado: **{_ind_eco.lower()}**")
     
         st.session_state["economic"] = int(final_score)
 
@@ -1411,6 +1425,20 @@ def render_methodology_tab():
         st.markdown("---")
         fiscal_final = round_to_half((perf_final + debt_final) / 2.0)
         st.metric("Fiscal assessment (average of the two segments)", fmt_score(fiscal_final))
+        st.markdown("---")
+        st.markdown("#### Resultado acumulado")
+        _fi_ext = int(st.session_state.get("external", 3))
+        _fi_mon = float(st.session_state.get("monetary", 3.0))
+        _fp_profile = (_fi_ext + fiscal_final + _fi_mon) / 3.0
+        _fi_inst = int(st.session_state.get("institutional", 4))
+        _fi_eco = int(st.session_state.get("economic", 4))
+        _ie_profile = (_fi_inst + _fi_eco) / 2.0
+        _fi1, _fi2, _fi3 = st.columns(3)
+        _fi1.metric("Fiscal (este pilar)", fmt_score(fiscal_final))
+        _fi2.metric("FP Profile (acumulado)", f"{_fp_profile:.2f}")
+        _fi3.metric("IE Profile (outras seções)", f"{_ie_profile:.2f}")
+        _ind_fis = indicative_from_matrix(_ie_profile, _fp_profile)
+        st.caption(f"Indicativo estimado: **{_ind_fis.lower()}**")
         st.session_state["fiscal"] = float(fiscal_final)
 
     elif method_page == "Monetary":
@@ -1566,6 +1594,20 @@ def render_methodology_tab():
         f2.metric("Negative adjustments", f"+{base_neg}")
         f3.metric("Monetary-union adjustments", f"+{union_adj}")
         f4.metric("Monetary assessment (final)", fmt_score(final_monetary))
+        st.markdown("---")
+        st.markdown("#### Resultado acumulado")
+        _mon_ext = int(st.session_state.get("external", 3))
+        _mon_fis = float(st.session_state.get("fiscal", 4.0))
+        _fp_profile = (_mon_ext + _mon_fis + final_monetary) / 3.0
+        _mon_inst = int(st.session_state.get("institutional", 4))
+        _mon_eco = int(st.session_state.get("economic", 4))
+        _ie_profile = (_mon_inst + _mon_eco) / 2.0
+        _m1, _m2, _m3 = st.columns(3)
+        _m1.metric("Monetary (este pilar)", fmt_score(final_monetary))
+        _m2.metric("FP Profile (acumulado)", f"{_fp_profile:.2f}")
+        _m3.metric("IE Profile (outras seções)", f"{_ie_profile:.2f}")
+        _ind_mon = indicative_from_matrix(_ie_profile, _fp_profile)
+        st.caption(f"Indicativo estimado: **{_ind_mon.lower()}**")
     
         st.session_state["monetary"] = float(final_monetary)
 
@@ -1623,6 +1665,20 @@ def render_methodology_tab():
         with st.expander("Ver Tabela 4 (imagem do PDF)"):
             if img.exists(): show_image(img)
             else: st.info("Imagem da Tabela 4 não encontrada em assets/.")
+        st.markdown("---")
+        st.markdown("#### Resultado acumulado")
+        _ext_fis = float(st.session_state.get("fiscal", 4.0))
+        _ext_mon = float(st.session_state.get("monetary", 3.0))
+        _fp_profile = (final_ext + _ext_fis + _ext_mon) / 3.0
+        _ext_inst = int(st.session_state.get("institutional", 4))
+        _ext_eco = int(st.session_state.get("economic", 4))
+        _ie_profile = (_ext_inst + _ext_eco) / 2.0
+        _ex1, _ex2, _ex3 = st.columns(3)
+        _ex1.metric("External (este pilar)", final_ext)
+        _ex2.metric("FP Profile (acumulado)", f"{_fp_profile:.2f}")
+        _ex3.metric("IE Profile (outras seções)", f"{_ie_profile:.2f}")
+        _ind_ext = indicative_from_matrix(_ie_profile, _fp_profile)
+        st.caption(f"Indicativo estimado: **{_ind_ext.lower()}**")
         st.session_state["external"] = int(final_ext)
 
     elif method_page == "Institutional":
@@ -1643,6 +1699,20 @@ def render_methodology_tab():
         else:
             final_inst = clamp_score(init_inst + war_risk)
         st.metric("Institutional assessment (final)", final_inst)
+        st.markdown("---")
+        st.markdown("#### Resultado acumulado")
+        _inst_eco = int(st.session_state.get("economic", 4))
+        _ie_profile = (final_inst + _inst_eco) / 2.0
+        _inst_ext = int(st.session_state.get("external", 3))
+        _inst_fis = float(st.session_state.get("fiscal", 4.0))
+        _inst_mon = float(st.session_state.get("monetary", 3.0))
+        _fp_profile = (_inst_ext + _inst_fis + _inst_mon) / 3.0
+        _i1, _i2, _i3 = st.columns(3)
+        _i1.metric("Institutional (este pilar)", final_inst)
+        _i2.metric("IE Profile (acumulado)", f"{_ie_profile:.2f}")
+        _i3.metric("FP Profile (outras seções)", f"{_fp_profile:.2f}")
+        _ind_inst = indicative_from_matrix(_ie_profile, _fp_profile)
+        st.caption(f"Indicativo estimado: **{_ind_inst.lower()}**")
         st.session_state["institutional"] = int(final_inst)
 
     elif method_page == "Resultados":

@@ -772,6 +772,14 @@ def render_moody():
             help="Ajuste discricionário de -9 a +9 notches",
         )
         st.session_state.f1_adj = f1_adj
+        st.markdown("---")
+        st.markdown("#### Resultado – Factor 1")
+        _f1 = calc_factor1(
+            st.session_state.f1_gdp, st.session_state.f1_mad,
+            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+        _r1, _r2 = st.columns(2)
+        _r1.metric("Score F1 (Economic Strength)", f"{_f1['final']:.2f}")
+        _r2.metric("Rating F1 (indicativo)", _f1['rating'].upper())
 
     # ═══════════════════════════════════════════════════════════════════
     # FACTOR 2 – INSTITUTIONS & GOVERNANCE (opções descritivas)
@@ -846,6 +854,22 @@ def render_moody():
                 help="Discretionary adjustment -3 to +3",
             )
             st.session_state.f2_ao = f2_ao
+        st.markdown("---")
+        st.markdown("#### Resultado – Factor 2 e Economic Resiliency (acumulado)")
+        _f1 = calc_factor1(
+            st.session_state.f1_gdp, st.session_state.f1_mad,
+            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+        _f2 = calc_factor2(
+            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+            st.session_state.f2_dh, st.session_state.f2_ao)
+        _er_score = round((_f1['final'] + _f2['final']) / 2)
+        _er_rating = score_to_alpha21(_er_score)
+        _m1, _m2, _m3, _m4 = st.columns(4)
+        _m1.metric("Score F2", f"{_f2['final']:.2f}")
+        _m2.metric("Rating F2", _f2['rating'].upper())
+        _m3.metric("Economic Resiliency Score (F1+F2)", str(_er_score))
+        _m4.metric("Economic Resiliency Rating", _er_rating.upper())
 
     
     elif page == "3️⃣ Fiscal Strength":
@@ -912,6 +936,30 @@ def render_moody():
                 options=adj3_opts, index=adj3_opts.index(st.session_state.f3_adj),
                 help="Ajuste discricionário de -3 a +3")
             st.session_state.f3_adj = f3_adj
+        st.markdown("---")
+        st.markdown("#### Resultado – Factor 3 e Gov. Financial Strength (acumulado)")
+        _f1 = calc_factor1(
+            st.session_state.f1_gdp, st.session_state.f1_mad,
+            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+        _f2 = calc_factor2(
+            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+            st.session_state.f2_dh, st.session_state.f2_ao)
+        _f3 = calc_factor3(
+            st.session_state.f3_gg, st.session_state.f3_gr,
+            st.session_state.f3_ir, st.session_state.f3_ig,
+            st.session_state.f3_hc, st.session_state.f3_ec,
+            st.session_state.f3_fc, st.session_state.f3_op,
+            st.session_state.f3_ga, st.session_state.f3_adj)
+        _er_score = round((_f1['final'] + _f2['final']) / 2)
+        _er_rating = score_to_alpha21(_er_score)
+        _fs_idx = RATING_SCALE.index(_f3['rating'])
+        _gfs_rating = GFS_MATRIX[_er_rating][_fs_idx]
+        _m1, _m2, _m3, _m4 = st.columns(4)
+        _m1.metric("Score F3 (Fiscal Strength)", f"{_f3['final']:.2f}")
+        _m2.metric("Rating F3", _f3['rating'].upper())
+        _m3.metric("Economic Resiliency (acum.)", _er_rating.upper())
+        _m4.metric("Gov. Financial Strength (acum.)", _gfs_rating.upper())
 
     # ═══════════════════════════════════════════════════════════════════
     # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
@@ -997,9 +1045,33 @@ def render_moody():
         f4_oth = st.selectbox("\U0001f527 Factor 4 Adj \u2013 Outros", options=oth_opts,
             index=oth_opts.index(st.session_state.f4_oth))
         st.session_state.f4_oth = f4_oth
-
-    # ═══════════════════════════════════════════════════════════════════
-    # RESULTADO CONSOLIDADO
+        st.markdown("---")
+        st.markdown("#### Resultado – Factor 4 (SETR) e Rating Final (acumulado)")
+        _f1 = calc_factor1(
+            st.session_state.f1_gdp, st.session_state.f1_mad,
+            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+        _f2 = calc_factor2(
+            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+            st.session_state.f2_dh, st.session_state.f2_ao)
+        _f3 = calc_factor3(
+            st.session_state.f3_gg, st.session_state.f3_gr,
+            st.session_state.f3_ir, st.session_state.f3_ig,
+            st.session_state.f3_hc, st.session_state.f3_ec,
+            st.session_state.f3_fc, st.session_state.f3_op,
+            st.session_state.f3_ga, st.session_state.f3_adj)
+        _f4 = calc_factor4(
+            ALPHA_CATS[st.session_state.f4_pol], ALPHA_CATS[st.session_state.f4_ease],
+            st.session_state.f4_refin,
+            RATING_SCALE[st.session_state.f4_bsce],
+            st.session_state.f4_ba, st.session_state.f4_badj,
+            ALPHA_CATS[st.session_state.f4_ext],
+            st.session_state.f4_eadj, st.session_state.f4_oth)
+        _final = calc_final(_f1, _f2, _f3, _f4)
+        _m1, _m2, _m3 = st.columns(3)
+        _m1.metric("SETR (Factor 4)", f"{_f4['setr_alpha'].upper()} · score {_f4['setr_score']:.1f}")
+        _m2.metric("Gov. Financial Strength (acum. F1–F3)", _final['gfs_rating'].upper())
+        _m3.metric("Rating Final (acum. F1–F4)", _final['final_rating'].upper())
     # ═══════════════════════════════════════════════════════════════════
     else:
         st.header("🏆 Results – Consolidated Scorecard")
