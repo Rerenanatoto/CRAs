@@ -1284,6 +1284,18 @@ def render_methodology_pillar(pillar_key):
     _qo_total = clamp_qo(_adjustments, _crisis_ext)
     _final_score = _srm_score + _qo_total
     _lt_fc_idr = score_to_lt_rating(_final_score)
+    # Resultado do pilar específico
+    _pillar_subtotal = rdf["Contribuição"].sum()
+    _pillar_qo = int(new_qo)
+    _pillar_adjusted = _pillar_subtotal + _pillar_qo
+    st.caption(f"**{PILLAR_LABELS[pillar_key]}**")
+    _pp1, _pp2, _pp3 = st.columns(3)
+    _pp1.metric("Subtotal do pilar", f"{_pillar_subtotal:.3f}")
+    _pp2.metric("QO do pilar", f"{_pillar_qo:+d}")
+    _pp3.metric("Pilar + QO", f"{_pillar_adjusted:.3f}")
+    st.markdown("---")
+    # Resultado SRM completo com todos os ajustes
+    st.caption("**SRM completo (todos os pilares + QO total)**")
     _rc1, _rc2, _rc3 = st.columns(3)
     _rc1.metric("SRM Score", f"{_srm_score:.2f}")
     _rc2.metric("QO Total", f"{_qo_total:+d}")
