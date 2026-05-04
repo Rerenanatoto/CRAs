@@ -1269,6 +1269,25 @@ def render_methodology_pillar(pillar_key):
         with st.expander("Fatores considerados"):
             for fct in QO_FACTORS[pillar_key]:
                 st.write(f"- {fct}")
+    # ── Resultado com ajuste ──
+    st.markdown("---")
+    st.markdown("#### Resultado com ajuste")
+    _inputs = get_clean_srm_inputs()
+    _srm_score, _ = compute_srm(_inputs)
+    _adjustments = {
+        "structural": int(qo_data.get("qo_structural", 0)),
+        "macro": int(qo_data.get("qo_macro", 0)),
+        "public_finances": int(qo_data.get("qo_public_finances", 0)),
+        "external": int(qo_data.get("qo_external", 0)),
+    }
+    _crisis_ext = bool(st.session_state.get("_qo_crisis", False))
+    _qo_total = clamp_qo(_adjustments, _crisis_ext)
+    _final_score = _srm_score + _qo_total
+    _lt_fc_idr = score_to_lt_rating(_final_score)
+    _rc1, _rc2, _rc3 = st.columns(3)
+    _rc1.metric("SRM Score", f"{_srm_score:.2f}")
+    _rc2.metric("QO Total", f"{_qo_total:+d}")
+    _rc3.metric("LT FC IDR (estimado)", _lt_fc_idr, delta=f"score {_final_score:.2f}")
 
 
 def render_methodology_qo():
@@ -1432,7 +1451,6 @@ def render_fitch():
                 PILLAR_LABELS["macro"],
                 PILLAR_LABELS["public_finances"],
                 PILLAR_LABELS["external"],
-                "Qualitative Overlay (QO)",
                 "Resultados",
             ]
         _cur_nav = st.session_state.get("_nav_page", "Visão geral")
@@ -1452,8 +1470,6 @@ def render_fitch():
             render_methodology_pillar("public_finances")
         elif sub_page == PILLAR_LABELS["external"]:
             render_methodology_pillar("external")
-        elif sub_page == "Qualitative Overlay (QO)":
-            render_methodology_qo()
         elif sub_page == "Resultados":
             render_methodology_results()
 
