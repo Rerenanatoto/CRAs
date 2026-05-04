@@ -1479,8 +1479,9 @@ def render_ratings_map(comparator_df):
     if highlight:
         hl_df = (
             ratings_df[ratings_df["country_name"].isin(highlight)]
-            [["country_name", "lt_fc_rating"]]
+            [["country_name", "lt_fc_rating", "rating_rank"]]
             .sort_values("rating_rank")
+            .drop(columns=["rating_rank"])
             .rename(columns={"country_name": "País", "lt_fc_rating": "LT FC IDR"})
         )
         st_dataframe_compat(hl_df, use_container_width=True, hide_index=True)
