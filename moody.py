@@ -968,6 +968,7 @@ def render_moody():
         st.header("4\ufe0f\u20e3 Factor 4 \u2013 Susceptibility to Event Risk")
         st.markdown("Avalia os riscos de eventos: pol\u00edtico, liquidez, banc\u00e1rio e externo. "
                     "O SETR \u00e9 determinado pelo **pior** (maior score) dos 4 sub-fatores.")
+        st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
         st.markdown("---")
 
         st.subheader("\U0001f5f3\ufe0f Political Risk")
