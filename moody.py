@@ -663,18 +663,6 @@ def render_moody():
         else:
             st.sidebar.info("Envie o arquivo Excel de ratings Moody's para ativar o mapa.")
 
-    page = st.selectbox("📌 Section", [
-        "📋 Overview",
-        "1️⃣ Economic Strength",
-        "2️⃣ Institutions & Governance",
-        "3️⃣ Fiscal Strength",
-        "4️⃣ Susceptibility to Event Risk",
-        "🏆 Results",
-        "🗺️ Mapa de Ratings",
-    ], key="moody_page")
-
-    st.markdown("---")
-
     DEFAULTS = {
         "f1_gdp": 2.2, "f1_mad": 1.80, "f1_nom": 2191.1, "f1_pc": 21052.0, "f1_adj": 0,
         "f2_le": 3, "f2_cj": 3, "f2_fp": 4, "f2_mp": 3, "f2_dh": 0, "f2_ao": 0,
@@ -710,577 +698,593 @@ def render_moody():
                 st.session_state["_last_pdf_hash"] = pdf_hash
 
 
-    # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 1 – ECONOMIC STRENGTH
-    # ═══════════════════════════════════════════════════════════════════
-    if page == "📋 Overview":
-        st.header("📋 Methodology Overview")
-        st.markdown(
-            "The Moody\u2019s Sovereign Rating Methodology (Nov 2022) combines **four broad factors** "
-            "into a final indicative sovereign rating:\n\n"
-            "1. **Economic Strength** \u2014 quantitative metrics: GDP growth, volatility, nominal GDP, GDP per capita.\n"
-            "2. **Institutions & Governance** \u2014 qualitative assessment of institutional quality and policy effectiveness, "
-            "anchored to World Governance Indicators (WGI).\n"
-            "3. **Fiscal Strength** \u2014 quantitative metrics: debt/GDP, debt/revenue, interest/revenue, interest/GDP, plus adjustments.\n"
-            "4. **Susceptibility to Event Risk (SETR)** \u2014 qualitative/quantitative: political risk, government liquidity, "
-            "banking sector risk, and external vulnerability. The SETR is the **worst** of the 4 sub-factors.\n\n"
-            "Factors 1 and 2 combine into **Economic Resiliency (ER)**. "
-            "ER is combined with Factor 3 via the **GFS matrix** to produce the **Government Financial Strength (GFS)**. "
-            "Finally, GFS is combined with SETR via the **Final matrix** to produce the **Indicative Sovereign Rating**."
-        )
-        st.subheader("Scorecard Framework")
-        st.image(str(ASSETS_DIR / "moody_framework.png"), use_container_width=True)
-        st.markdown("---")
-        st.subheader("Scorecard Overview (Exhibit 2)")
-        st.image(str(ASSETS_DIR / "moody_scorecard_overview.png"), use_container_width=True)
-        st.markdown("---")
-        st.subheader("WGI \u2013 World Governance Indicators")
-        st.markdown(
-            "Several sub-factors in Factors 2 and 4 are anchored to the **World Bank\u2019s Worldwide Governance Indicators (WGI)**. "
-            "The acronyms used in the dropdown options refer to:\n\n"
-            "| Acronym | Full Name | Used in |\n"
-            "|---|---|---|\n"
-            "| **GE** | Government Effectiveness | Factor 2 \u2013 Quality of Leg. & Exec. Institutions |\n"
-            "| **RL** | Rule of Law | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
-            "| **CC** | Control of Corruption | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
-            "| **VA** | Voice & Accountability | Factor 4 \u2013 Political Risk |\n"
-            "| **PS** | Political Stability & Absence of Violence | Factor 4 \u2013 Political Risk |\n\n"
-            "WGI scores range from approximately **-2.5** (weak) to **+2.5** (strong)."
-        )
-        st.markdown("---")
-        st.subheader("Scoring Scale (Exhibits 14 & 15)")
-        st.image(str(ASSETS_DIR / "moody_subfactor_scores.png"), use_container_width=True)
-        st.image(str(ASSETS_DIR / "moody_scoring_scale.png"), use_container_width=True)
+    # ─ Tabs ─────────────────────────────────────────────────
+    tab_met, tab_map = st.tabs(["📘 Metodologia", "🗺️ Mapa de Ratings"])
 
-    elif page == "1️⃣ Economic Strength":
-        st.header("1️⃣ Factor 1 – Economic Strength")
-        st.markdown("Evaluates the growth dynamics, scale of the economy, and national income.")
-        with st.expander("📊 Methodology reference – Economic Strength scoring ranges"):
-            st.image(str(ASSETS_DIR / "moody_factor1_ranges.png"), use_container_width=True)
+    with tab_met:
+        page = st.selectbox("📌 Section", [
+            "📋 Overview",
+            "1️⃣ Economic Strength",
+            "2️⃣ Institutions & Governance",
+            "3️⃣ Fiscal Strength",
+            "4️⃣ Susceptibility to Event Risk",
+            "🏆 Results",
+        ], key="moody_page")
+
         st.markdown("---")
-        col1, col2 = st.columns(2)
-        with col1:
-            f1_gdp = st.number_input(
-                "📈 Average Real GDP Growth (%)",
-                value=st.session_state.f1_gdp,
-                min_value=-15.0, max_value=25.0, step=0.1, format="%.2f",
-                help="Crescimento médio real do PIB (%)",
+
+        # ═══════════════════════════════════════════════════════════════════
+        # FACTOR 1 – ECONOMIC STRENGTH
+        # ═══════════════════════════════════════════════════════════════════
+        if page == "📋 Overview":
+            st.header("📋 Methodology Overview")
+            st.markdown(
+                "The Moody\u2019s Sovereign Rating Methodology (Nov 2022) combines **four broad factors** "
+                "into a final indicative sovereign rating:\n\n"
+                "1. **Economic Strength** \u2014 quantitative metrics: GDP growth, volatility, nominal GDP, GDP per capita.\n"
+                "2. **Institutions & Governance** \u2014 qualitative assessment of institutional quality and policy effectiveness, "
+                "anchored to World Governance Indicators (WGI).\n"
+                "3. **Fiscal Strength** \u2014 quantitative metrics: debt/GDP, debt/revenue, interest/revenue, interest/GDP, plus adjustments.\n"
+                "4. **Susceptibility to Event Risk (SETR)** \u2014 qualitative/quantitative: political risk, government liquidity, "
+                "banking sector risk, and external vulnerability. The SETR is the **worst** of the 4 sub-factors.\n\n"
+                "Factors 1 and 2 combine into **Economic Resiliency (ER)**. "
+                "ER is combined with Factor 3 via the **GFS matrix** to produce the **Government Financial Strength (GFS)**. "
+                "Finally, GFS is combined with SETR via the **Final matrix** to produce the **Indicative Sovereign Rating**."
             )
-            st.session_state.f1_gdp = f1_gdp
-        with col2:
-            f1_mad = st.number_input(
-                "📉 MAD Volatility in Real GDP Growth",
-                value=st.session_state.f1_mad,
-                min_value=0.0, max_value=15.0, step=0.01, format="%.2f",
-                help="Desvio médio absoluto do crescimento do PIB",
+            st.subheader("Scorecard Framework")
+            st.image(str(ASSETS_DIR / "moody_framework.png"), use_container_width=True)
+            st.markdown("---")
+            st.subheader("Scorecard Overview (Exhibit 2)")
+            st.image(str(ASSETS_DIR / "moody_scorecard_overview.png"), use_container_width=True)
+            st.markdown("---")
+            st.subheader("WGI \u2013 World Governance Indicators")
+            st.markdown(
+                "Several sub-factors in Factors 2 and 4 are anchored to the **World Bank\u2019s Worldwide Governance Indicators (WGI)**. "
+                "The acronyms used in the dropdown options refer to:\n\n"
+                "| Acronym | Full Name | Used in |\n"
+                "|---|---|---|\n"
+                "| **GE** | Government Effectiveness | Factor 2 \u2013 Quality of Leg. & Exec. Institutions |\n"
+                "| **RL** | Rule of Law | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
+                "| **CC** | Control of Corruption | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
+                "| **VA** | Voice & Accountability | Factor 4 \u2013 Political Risk |\n"
+                "| **PS** | Political Stability & Absence of Violence | Factor 4 \u2013 Political Risk |\n\n"
+                "WGI scores range from approximately **-2.5** (weak) to **+2.5** (strong)."
             )
-            st.session_state.f1_mad = f1_mad
-        col3, col4 = st.columns(2)
-        with col3:
-            f1_nom = st.number_input(
-                "🌍 Nominal GDP (US$ bilhões)",
-                value=st.session_state.f1_nom,
-                min_value=0.0, max_value=100000.0, step=1.0, format="%.1f",
-                help="PIB nominal em dólares (bilhões)",
+            st.markdown("---")
+            st.subheader("Scoring Scale (Exhibits 14 & 15)")
+            st.image(str(ASSETS_DIR / "moody_subfactor_scores.png"), use_container_width=True)
+            st.image(str(ASSETS_DIR / "moody_scoring_scale.png"), use_container_width=True)
+
+        elif page == "1️⃣ Economic Strength":
+            st.header("1️⃣ Factor 1 – Economic Strength")
+            st.markdown("Evaluates the growth dynamics, scale of the economy, and national income.")
+            with st.expander("📊 Methodology reference – Economic Strength scoring ranges"):
+                st.image(str(ASSETS_DIR / "moody_factor1_ranges.png"), use_container_width=True)
+            st.markdown("---")
+            col1, col2 = st.columns(2)
+            with col1:
+                f1_gdp = st.number_input(
+                    "📈 Average Real GDP Growth (%)",
+                    value=st.session_state.f1_gdp,
+                    min_value=-15.0, max_value=25.0, step=0.1, format="%.2f",
+                    help="Crescimento médio real do PIB (%)",
+                )
+                st.session_state.f1_gdp = f1_gdp
+            with col2:
+                f1_mad = st.number_input(
+                    "📉 MAD Volatility in Real GDP Growth",
+                    value=st.session_state.f1_mad,
+                    min_value=0.0, max_value=15.0, step=0.01, format="%.2f",
+                    help="Desvio médio absoluto do crescimento do PIB",
+                )
+                st.session_state.f1_mad = f1_mad
+            col3, col4 = st.columns(2)
+            with col3:
+                f1_nom = st.number_input(
+                    "🌍 Nominal GDP (US$ bilhões)",
+                    value=st.session_state.f1_nom,
+                    min_value=0.0, max_value=100000.0, step=1.0, format="%.1f",
+                    help="PIB nominal em dólares (bilhões)",
+                )
+                st.session_state.f1_nom = f1_nom
+            with col4:
+                f1_pc = st.number_input(
+                    "👤 GDP per Capita (PPP, US$)",
+                    value=st.session_state.f1_pc,
+                    min_value=0.0, max_value=250000.0, step=100.0, format="%.0f",
+                    help="PIB per capita em PPP (dólares)",
+                )
+                st.session_state.f1_pc = f1_pc
+            st.markdown("---")
+            adj_opts = list(range(-9, 10))
+            f1_adj = st.selectbox(
+                "🔧 Ajuste – Outros (notches)",
+                options=adj_opts,
+                index=adj_opts.index(st.session_state.f1_adj),
+                help="Ajuste discricionário de -9 a +9 notches",
             )
-            st.session_state.f1_nom = f1_nom
-        with col4:
-            f1_pc = st.number_input(
-                "👤 GDP per Capita (PPP, US$)",
-                value=st.session_state.f1_pc,
-                min_value=0.0, max_value=250000.0, step=100.0, format="%.0f",
-                help="PIB per capita em PPP (dólares)",
+            st.session_state.f1_adj = f1_adj
+            st.markdown("---")
+            st.markdown("#### Resultado – Factor 1")
+            _f1 = calc_factor1(
+                st.session_state.f1_gdp, st.session_state.f1_mad,
+                st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+            _r1, _r2 = st.columns(2)
+            _r1.metric("Score F1 (Economic Strength)", f"{_f1['final']:.2f}")
+            _r2.metric("Rating F1 (indicativo)", _f1['rating'].upper())
+
+        # ═══════════════════════════════════════════════════════════════════
+        # FACTOR 2 – INSTITUTIONS & GOVERNANCE (opções descritivas)
+        # ═══════════════════════════════════════════════════════════════════
+        elif page == "2️⃣ Institutions & Governance":
+            st.header("2️⃣ Factor 2 – Institutions & Governance")
+            st.markdown("Assesses institutional quality and policy effectiveness.")
+            st.caption("WGI: **GE** = Government Effectiveness · **RL** = Rule of Law · **CC** = Control of Corruption")
+            st.markdown("---")
+
+            f2_le = st.selectbox(
+                "🏛️ Quality of Legislative & Executive Institutions (20%)",
+                options=F2_LEGEXEC_OPTS, index=st.session_state.f2_le,
+                help="Quality of legislative and executive institutions (pp. 8-10)",
             )
-            st.session_state.f1_pc = f1_pc
-        st.markdown("---")
-        adj_opts = list(range(-9, 10))
-        f1_adj = st.selectbox(
-            "🔧 Ajuste – Outros (notches)",
-            options=adj_opts,
-            index=adj_opts.index(st.session_state.f1_adj),
-            help="Ajuste discricionário de -9 a +9 notches",
-        )
-        st.session_state.f1_adj = f1_adj
-        st.markdown("---")
-        st.markdown("#### Resultado – Factor 1")
-        _f1 = calc_factor1(
-            st.session_state.f1_gdp, st.session_state.f1_mad,
-            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
-        _r1, _r2 = st.columns(2)
-        _r1.metric("Score F1 (Economic Strength)", f"{_f1['final']:.2f}")
-        _r2.metric("Rating F1 (indicativo)", _f1['rating'].upper())
+            st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
+            _cat = ALPHA_CATS[st.session_state.f2_le]
+            st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Quality of Legislative & Executive Institutions (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f2_legexec.png"), use_container_width=True)
 
-    # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 2 – INSTITUTIONS & GOVERNANCE (opções descritivas)
-    # ═══════════════════════════════════════════════════════════════════
-    elif page == "2️⃣ Institutions & Governance":
-        st.header("2️⃣ Factor 2 – Institutions & Governance")
-        st.markdown("Assesses institutional quality and policy effectiveness.")
-        st.caption("WGI: **GE** = Government Effectiveness · **RL** = Rule of Law · **CC** = Control of Corruption")
-        st.markdown("---")
-
-        f2_le = st.selectbox(
-            "🏛️ Quality of Legislative & Executive Institutions (20%)",
-            options=F2_LEGEXEC_OPTS, index=st.session_state.f2_le,
-            help="Quality of legislative and executive institutions (pp. 8-10)",
-        )
-        st.session_state.f2_le = F2_LEGEXEC_OPTS.index(f2_le)
-        _cat = ALPHA_CATS[st.session_state.f2_le]
-        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Quality of Legislative & Executive Institutions (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f2_legexec.png"), use_container_width=True)
-
-        f2_cj = st.selectbox(
-            "⚖️ Strength of Civil Society & Judiciary (20%)",
-            options=F2_CIVILJUD_OPTS, index=st.session_state.f2_cj,
-            help="Strength of civil society and judiciary (pp. 10-12)",
-        )
-        st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
-        _cat = ALPHA_CATS[st.session_state.f2_cj]
-        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Strength of Civil Society & Judiciary (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f2_civiljud.png"), use_container_width=True)
-
-        st.markdown("---")
-
-        f2_fp = st.selectbox(
-            "💰 Fiscal Policy Effectiveness (30%)",
-            options=F2_FISCAL_OPTS, index=st.session_state.f2_fp,
-            help="Fiscal policy effectiveness (pp. 11-12)",
-        )
-        st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
-        _cat = ALPHA_CATS[st.session_state.f2_fp]
-        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Fiscal Policy Effectiveness (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f2_fiscal.png"), use_container_width=True)
-
-        f2_mp = st.selectbox(
-            "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
-            options=F2_MONETARY_OPTS, index=st.session_state.f2_mp,
-            help="Monetary and macroeconomic policy effectiveness (pp. 13-14)",
-        )
-        st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
-        _cat = ALPHA_CATS[st.session_state.f2_mp]
-        st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Monetary & Macroeconomic Policy Effectiveness (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f2_monetary.png"), use_container_width=True)
-
-        st.markdown("---")
-        col5, col6 = st.columns(2)
-        with col5:
-            dh_opts = [0, -1, -2, -3]
-            f2_dh = st.selectbox(
-                "📉 Adjustment – Default History (notches)",
-                options=dh_opts, index=dh_opts.index(st.session_state.f2_dh),
-                help="Penalty for default history (0 to -3)",
+            f2_cj = st.selectbox(
+                "⚖️ Strength of Civil Society & Judiciary (20%)",
+                options=F2_CIVILJUD_OPTS, index=st.session_state.f2_cj,
+                help="Strength of civil society and judiciary (pp. 10-12)",
             )
-            st.session_state.f2_dh = f2_dh
-        with col6:
-            ao_opts = list(range(-3, 4))
-            f2_ao = st.selectbox(
-                "🔧 Adjustment – Other (notches)",
-                options=ao_opts, index=ao_opts.index(st.session_state.f2_ao),
-                help="Discretionary adjustment -3 to +3",
+            st.session_state.f2_cj = F2_CIVILJUD_OPTS.index(f2_cj)
+            _cat = ALPHA_CATS[st.session_state.f2_cj]
+            st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Strength of Civil Society & Judiciary (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f2_civiljud.png"), use_container_width=True)
+
+            st.markdown("---")
+
+            f2_fp = st.selectbox(
+                "💰 Fiscal Policy Effectiveness (30%)",
+                options=F2_FISCAL_OPTS, index=st.session_state.f2_fp,
+                help="Fiscal policy effectiveness (pp. 11-12)",
             )
-            st.session_state.f2_ao = f2_ao
-        st.markdown("---")
-        st.markdown("#### Resultado – Factor 2 e Economic Resiliency (acumulado)")
-        _f1 = calc_factor1(
-            st.session_state.f1_gdp, st.session_state.f1_mad,
-            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
-        _f2 = calc_factor2(
-            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
-            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
-            st.session_state.f2_dh, st.session_state.f2_ao)
-        _er_score = round((_f1['final'] + _f2['final']) / 2)
-        _er_rating = score_to_alpha21(_er_score)
-        _m1, _m2, _m3, _m4 = st.columns(4)
-        _m1.metric("Score F2", f"{_f2['final']:.2f}")
-        _m2.metric("Rating F2", _f2['rating'].upper())
-        _m3.metric("Economic Resiliency Score (F1+F2)", str(_er_score))
-        _m4.metric("Economic Resiliency Rating", _er_rating.upper())
+            st.session_state.f2_fp = F2_FISCAL_OPTS.index(f2_fp)
+            _cat = ALPHA_CATS[st.session_state.f2_fp]
+            st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Fiscal Policy Effectiveness (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f2_fiscal.png"), use_container_width=True)
+
+            f2_mp = st.selectbox(
+                "📊 Monetary & Macroeconomic Policy Effectiveness (30%)",
+                options=F2_MONETARY_OPTS, index=st.session_state.f2_mp,
+                help="Monetary and macroeconomic policy effectiveness (pp. 13-14)",
+            )
+            st.session_state.f2_mp = F2_MONETARY_OPTS.index(f2_mp)
+            _cat = ALPHA_CATS[st.session_state.f2_mp]
+            st.markdown(f"→ **{_cat.upper()}** · score {ALPHA_SCORES[_cat]}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Monetary & Macroeconomic Policy Effectiveness (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f2_monetary.png"), use_container_width=True)
+
+            st.markdown("---")
+            col5, col6 = st.columns(2)
+            with col5:
+                dh_opts = [0, -1, -2, -3]
+                f2_dh = st.selectbox(
+                    "📉 Adjustment – Default History (notches)",
+                    options=dh_opts, index=dh_opts.index(st.session_state.f2_dh),
+                    help="Penalty for default history (0 to -3)",
+                )
+                st.session_state.f2_dh = f2_dh
+            with col6:
+                ao_opts = list(range(-3, 4))
+                f2_ao = st.selectbox(
+                    "🔧 Adjustment – Other (notches)",
+                    options=ao_opts, index=ao_opts.index(st.session_state.f2_ao),
+                    help="Discretionary adjustment -3 to +3",
+                )
+                st.session_state.f2_ao = f2_ao
+            st.markdown("---")
+            st.markdown("#### Resultado – Factor 2 e Economic Resiliency (acumulado)")
+            _f1 = calc_factor1(
+                st.session_state.f1_gdp, st.session_state.f1_mad,
+                st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+            _f2 = calc_factor2(
+                ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+                ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+                st.session_state.f2_dh, st.session_state.f2_ao)
+            _er_score = round((_f1['final'] + _f2['final']) / 2)
+            _er_rating = score_to_alpha21(_er_score)
+            _m1, _m2, _m3, _m4 = st.columns(4)
+            _m1.metric("Score F2", f"{_f2['final']:.2f}")
+            _m2.metric("Rating F2", _f2['rating'].upper())
+            _m3.metric("Economic Resiliency Score (F1+F2)", str(_er_score))
+            _m4.metric("Economic Resiliency Rating", _er_rating.upper())
 
     
-    elif page == "3️⃣ Fiscal Strength":
-        st.header("3️⃣ Factor 3 – Fiscal Strength")
-        st.markdown("Evaluates fiscal sustainability: debt burden and debt affordability.")
-        with st.expander("📊 Methodology reference – Fiscal Strength scoring ranges"):
-            st.image(str(ASSETS_DIR / "moody_factor3_ranges.png"), use_container_width=True)
-        st.markdown("---")
-        st.subheader("📊 Indicadores Quantitativos (peso igual: 25% cada)")
-        col1, col2 = st.columns(2)
-        with col1:
-            f3_gg = st.number_input("🏦 GGGD / GDP (%)", value=st.session_state.f3_gg,
-                min_value=0.0, max_value=500.0, step=0.1, format="%.1f",
-                help="Dívida bruta do governo geral / PIB")
-            st.session_state.f3_gg = f3_gg
-        with col2:
-            f3_gr = st.number_input("📋 GGGD / Revenue (%)", value=st.session_state.f3_gr,
-                min_value=0.0, max_value=3000.0, step=0.1, format="%.1f",
-                help="Dívida bruta do governo geral / Receita")
-            st.session_state.f3_gr = f3_gr
-        col3, col4 = st.columns(2)
-        with col3:
-            f3_ir = st.number_input("💸 Interest Payments / Revenue (%)", value=st.session_state.f3_ir,
-                min_value=0.0, max_value=100.0, step=0.1, format="%.1f",
-                help="Pagamento de juros / Receita")
-            st.session_state.f3_ir = f3_ir
-        with col4:
-            f3_ig = st.number_input("📉 Interest Payments / GDP (%)", value=st.session_state.f3_ig,
-                min_value=0.0, max_value=50.0, step=0.1, format="%.1f",
-                help="Pagamento de juros / PIB")
-            st.session_state.f3_ig = f3_ig
-        st.markdown("---")
-        st.subheader("🔧 Variáveis de Ajuste")
-        col5, col6, col7 = st.columns(3)
-        with col5:
-            f3_hc = st.number_input("📈 Mudança Histórica Dívida/GDP (p.p., t-8→t)",
-                value=st.session_state.f3_hc, min_value=-100.0, max_value=200.0, step=0.1, format="%.1f",
-                help="Variação acumulada de Dívida/PIB nos últimos 8 anos")
-            st.session_state.f3_hc = f3_hc
-        with col6:
-            f3_ec = st.number_input("🔮 Mudança Esperada Dívida/GDP (p.p., t→t+2)",
-                value=st.session_state.f3_ec, min_value=-100.0, max_value=200.0, step=0.1, format="%.1f",
-                help="Variação esperada de Dívida/PIB nos próximos 2 anos")
-            st.session_state.f3_ec = f3_ec
-        with col7:
-            f3_fc = st.number_input("💱 FC Debt / GGGD (%)", value=st.session_state.f3_fc,
-                min_value=0.0, max_value=100.0, step=0.1, format="%.1f",
-                help="Dívida em moeda estrangeira / Dívida bruta")
-            st.session_state.f3_fc = f3_fc
-        col8, col9, col10 = st.columns(3)
-        with col8:
-            f3_op = st.number_input("🏢 Other Public Sector Debt / GDP (%)", value=st.session_state.f3_op,
-                min_value=0.0, max_value=200.0, step=0.1, format="%.1f",
-                help="Outros passivos do setor público / PIB")
-            st.session_state.f3_op = f3_op
-        with col9:
-            f3_ga = st.number_input("💰 Gov. Financial Assets / GDP (%)", value=st.session_state.f3_ga,
-                min_value=0.0, max_value=500.0, step=0.1, format="%.1f",
-                help="Ativos financeiros do governo / PIB")
-            st.session_state.f3_ga = f3_ga
-        with col10:
-            adj3_opts = list(range(-3, 4))
-            f3_adj = st.selectbox("🔧 Ajuste – Outros (notches)",
-                options=adj3_opts, index=adj3_opts.index(st.session_state.f3_adj),
-                help="Ajuste discricionário de -3 a +3")
-            st.session_state.f3_adj = f3_adj
-        st.markdown("---")
-        st.markdown("#### Resultado – Factor 3 e Gov. Financial Strength (acumulado)")
-        _f1 = calc_factor1(
-            st.session_state.f1_gdp, st.session_state.f1_mad,
-            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
-        _f2 = calc_factor2(
-            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
-            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
-            st.session_state.f2_dh, st.session_state.f2_ao)
-        _f3 = calc_factor3(
-            st.session_state.f3_gg, st.session_state.f3_gr,
-            st.session_state.f3_ir, st.session_state.f3_ig,
-            st.session_state.f3_hc, st.session_state.f3_ec,
-            st.session_state.f3_fc, st.session_state.f3_op,
-            st.session_state.f3_ga, st.session_state.f3_adj)
-        _er_score = round((_f1['final'] + _f2['final']) / 2)
-        _er_rating = score_to_alpha21(_er_score)
-        _fs_idx = RATING_SCALE.index(_f3['rating'])
-        _gfs_rating = GFS_MATRIX[_er_rating][_fs_idx]
-        _m1, _m2, _m3, _m4 = st.columns(4)
-        _m1.metric("Score F3 (Fiscal Strength)", f"{_f3['final']:.2f}")
-        _m2.metric("Rating F3", _f3['rating'].upper())
-        _m3.metric("Economic Resiliency (acum.)", _er_rating.upper())
-        _m4.metric("Gov. Financial Strength (acum.)", _gfs_rating.upper())
+        elif page == "3️⃣ Fiscal Strength":
+            st.header("3️⃣ Factor 3 – Fiscal Strength")
+            st.markdown("Evaluates fiscal sustainability: debt burden and debt affordability.")
+            with st.expander("📊 Methodology reference – Fiscal Strength scoring ranges"):
+                st.image(str(ASSETS_DIR / "moody_factor3_ranges.png"), use_container_width=True)
+            st.markdown("---")
+            st.subheader("📊 Indicadores Quantitativos (peso igual: 25% cada)")
+            col1, col2 = st.columns(2)
+            with col1:
+                f3_gg = st.number_input("🏦 GGGD / GDP (%)", value=st.session_state.f3_gg,
+                    min_value=0.0, max_value=500.0, step=0.1, format="%.1f",
+                    help="Dívida bruta do governo geral / PIB")
+                st.session_state.f3_gg = f3_gg
+            with col2:
+                f3_gr = st.number_input("📋 GGGD / Revenue (%)", value=st.session_state.f3_gr,
+                    min_value=0.0, max_value=3000.0, step=0.1, format="%.1f",
+                    help="Dívida bruta do governo geral / Receita")
+                st.session_state.f3_gr = f3_gr
+            col3, col4 = st.columns(2)
+            with col3:
+                f3_ir = st.number_input("💸 Interest Payments / Revenue (%)", value=st.session_state.f3_ir,
+                    min_value=0.0, max_value=100.0, step=0.1, format="%.1f",
+                    help="Pagamento de juros / Receita")
+                st.session_state.f3_ir = f3_ir
+            with col4:
+                f3_ig = st.number_input("📉 Interest Payments / GDP (%)", value=st.session_state.f3_ig,
+                    min_value=0.0, max_value=50.0, step=0.1, format="%.1f",
+                    help="Pagamento de juros / PIB")
+                st.session_state.f3_ig = f3_ig
+            st.markdown("---")
+            st.subheader("🔧 Variáveis de Ajuste")
+            col5, col6, col7 = st.columns(3)
+            with col5:
+                f3_hc = st.number_input("📈 Mudança Histórica Dívida/GDP (p.p., t-8→t)",
+                    value=st.session_state.f3_hc, min_value=-100.0, max_value=200.0, step=0.1, format="%.1f",
+                    help="Variação acumulada de Dívida/PIB nos últimos 8 anos")
+                st.session_state.f3_hc = f3_hc
+            with col6:
+                f3_ec = st.number_input("🔮 Mudança Esperada Dívida/GDP (p.p., t→t+2)",
+                    value=st.session_state.f3_ec, min_value=-100.0, max_value=200.0, step=0.1, format="%.1f",
+                    help="Variação esperada de Dívida/PIB nos próximos 2 anos")
+                st.session_state.f3_ec = f3_ec
+            with col7:
+                f3_fc = st.number_input("💱 FC Debt / GGGD (%)", value=st.session_state.f3_fc,
+                    min_value=0.0, max_value=100.0, step=0.1, format="%.1f",
+                    help="Dívida em moeda estrangeira / Dívida bruta")
+                st.session_state.f3_fc = f3_fc
+            col8, col9, col10 = st.columns(3)
+            with col8:
+                f3_op = st.number_input("🏢 Other Public Sector Debt / GDP (%)", value=st.session_state.f3_op,
+                    min_value=0.0, max_value=200.0, step=0.1, format="%.1f",
+                    help="Outros passivos do setor público / PIB")
+                st.session_state.f3_op = f3_op
+            with col9:
+                f3_ga = st.number_input("💰 Gov. Financial Assets / GDP (%)", value=st.session_state.f3_ga,
+                    min_value=0.0, max_value=500.0, step=0.1, format="%.1f",
+                    help="Ativos financeiros do governo / PIB")
+                st.session_state.f3_ga = f3_ga
+            with col10:
+                adj3_opts = list(range(-3, 4))
+                f3_adj = st.selectbox("🔧 Ajuste – Outros (notches)",
+                    options=adj3_opts, index=adj3_opts.index(st.session_state.f3_adj),
+                    help="Ajuste discricionário de -3 a +3")
+                st.session_state.f3_adj = f3_adj
+            st.markdown("---")
+            st.markdown("#### Resultado – Factor 3 e Gov. Financial Strength (acumulado)")
+            _f1 = calc_factor1(
+                st.session_state.f1_gdp, st.session_state.f1_mad,
+                st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+            _f2 = calc_factor2(
+                ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+                ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+                st.session_state.f2_dh, st.session_state.f2_ao)
+            _f3 = calc_factor3(
+                st.session_state.f3_gg, st.session_state.f3_gr,
+                st.session_state.f3_ir, st.session_state.f3_ig,
+                st.session_state.f3_hc, st.session_state.f3_ec,
+                st.session_state.f3_fc, st.session_state.f3_op,
+                st.session_state.f3_ga, st.session_state.f3_adj)
+            _er_score = round((_f1['final'] + _f2['final']) / 2)
+            _er_rating = score_to_alpha21(_er_score)
+            _fs_idx = RATING_SCALE.index(_f3['rating'])
+            _gfs_rating = GFS_MATRIX[_er_rating][_fs_idx]
+            _m1, _m2, _m3, _m4 = st.columns(4)
+            _m1.metric("Score F3 (Fiscal Strength)", f"{_f3['final']:.2f}")
+            _m2.metric("Rating F3", _f3['rating'].upper())
+            _m3.metric("Economic Resiliency (acum.)", _er_rating.upper())
+            _m4.metric("Gov. Financial Strength (acum.)", _gfs_rating.upper())
 
-    # ═══════════════════════════════════════════════════════════════════
-    # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
-    # ═══════════════════════════════════════════════════════════════════
-    elif page == "4\ufe0f\u20e3 Susceptibility to Event Risk":
-        st.header("4\ufe0f\u20e3 Factor 4 \u2013 Susceptibility to Event Risk")
-        st.markdown("Avalia os riscos de eventos: pol\u00edtico, liquidez, banc\u00e1rio e externo. "
-                    "O SETR \u00e9 determinado pelo **pior** (maior score) dos 4 sub-fatores.")
-        st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
-        st.markdown("---")
+        # ═══════════════════════════════════════════════════════════════════
+        # FACTOR 4 – SUSCEPTIBILITY TO EVENT RISK
+        # ═══════════════════════════════════════════════════════════════════
+        elif page == "4\ufe0f\u20e3 Susceptibility to Event Risk":
+            st.header("4\ufe0f\u20e3 Factor 4 \u2013 Susceptibility to Event Risk")
+            st.markdown("Avalia os riscos de eventos: pol\u00edtico, liquidez, banc\u00e1rio e externo. "
+                        "O SETR \u00e9 determinado pelo **pior** (maior score) dos 4 sub-fatores.")
+            st.caption("WGI: **VA** = Voice & Accountability · **PS** = Political Stability & Absence of Violence")
+            st.markdown("---")
 
-        st.subheader("\U0001f5f3\ufe0f Political Risk")
-        f4_pol_sel = st.selectbox("\U0001f5f3\ufe0f Domestic Political and Geopolitical Risk",
-            options=F4_POLITICAL_OPTS, index=st.session_state.f4_pol,
-            help="Risco pol\u00edtico dom\u00e9stico e geopol\u00edtico")
-        st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
-        _cat = ALPHA_CATS[st.session_state.f4_pol]
-        st.markdown(f"\u2192 **{_cat.upper()}** \u00b7 score {ALPHA_SCORES[_cat]}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Political Risk (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f4_political.png"), use_container_width=True)
-        st.markdown("---")
+            st.subheader("\U0001f5f3\ufe0f Political Risk")
+            f4_pol_sel = st.selectbox("\U0001f5f3\ufe0f Domestic Political and Geopolitical Risk",
+                options=F4_POLITICAL_OPTS, index=st.session_state.f4_pol,
+                help="Risco pol\u00edtico dom\u00e9stico e geopol\u00edtico")
+            st.session_state.f4_pol = F4_POLITICAL_OPTS.index(f4_pol_sel)
+            _cat = ALPHA_CATS[st.session_state.f4_pol]
+            st.markdown(f"\u2192 **{_cat.upper()}** \u00b7 score {ALPHA_SCORES[_cat]}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Political Risk (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f4_political.png"), use_container_width=True)
+            st.markdown("---")
 
-        st.subheader("\U0001f4b0 Government Liquidity Risk")
-        f4_ease_sel = st.selectbox("\U0001f4b0 Ease of Access to Funding",
-            options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease)
-        st.session_state.f4_ease = F4_GOVLIQ_OPTS.index(f4_ease_sel)
-        _cat_ease = ALPHA_CATS[st.session_state.f4_ease]
-        st.markdown(f"\u2192 Ease of Access: **{_cat_ease.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ease]}")
-        refin_opts = [0, 1, 2]
-        f4_refin = st.selectbox("\u2b07\ufe0f High Refinancing Risk Adj", options=refin_opts,
-            index=refin_opts.index(st.session_state.f4_refin))
-        st.session_state.f4_refin = f4_refin
-        _ease_score = ALPHA_SCORES[_cat_ease]
-        _liq_score = clamp_score(_ease_score + st.session_state.f4_refin)
-        _liq_alpha = score_to_broad(_liq_score)
-        st.markdown(f"\u2192 Gov Liquidity (adjusted): **{_liq_alpha.upper()}** \u00b7 score {round(_liq_score,1)}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Government Liquidity Risk (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f4_govliq.png"), use_container_width=True)
-        st.markdown("---")
+            st.subheader("\U0001f4b0 Government Liquidity Risk")
+            f4_ease_sel = st.selectbox("\U0001f4b0 Ease of Access to Funding",
+                options=F4_GOVLIQ_OPTS, index=st.session_state.f4_ease)
+            st.session_state.f4_ease = F4_GOVLIQ_OPTS.index(f4_ease_sel)
+            _cat_ease = ALPHA_CATS[st.session_state.f4_ease]
+            st.markdown(f"\u2192 Ease of Access: **{_cat_ease.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ease]}")
+            refin_opts = [0, 1, 2]
+            f4_refin = st.selectbox("\u2b07\ufe0f High Refinancing Risk Adj", options=refin_opts,
+                index=refin_opts.index(st.session_state.f4_refin))
+            st.session_state.f4_refin = f4_refin
+            _ease_score = ALPHA_SCORES[_cat_ease]
+            _liq_score = clamp_score(_ease_score + st.session_state.f4_refin)
+            _liq_alpha = score_to_broad(_liq_score)
+            st.markdown(f"\u2192 Gov Liquidity (adjusted): **{_liq_alpha.upper()}** \u00b7 score {round(_liq_score,1)}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Government Liquidity Risk (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f4_govliq.png"), use_container_width=True)
+            st.markdown("---")
 
-        st.subheader("\U0001f3e6 Banking Sector Risk")
-        alpha21_opts = [r.upper() for r in RATING_SCALE]
-        col3, col4 = st.columns(2)
-        with col3:
-            f4_bsce = st.selectbox("BSCE", options=alpha21_opts, index=st.session_state.f4_bsce)
-            st.session_state.f4_bsce = alpha21_opts.index(f4_bsce)
-        with col4:
-            f4_ba = st.number_input("Bank Assets/GDP (%)", value=st.session_state.f4_ba,
-                min_value=0.0, max_value=1500.0, step=0.1, format="%.1f")
-            st.session_state.f4_ba = f4_ba
-        ba_opts = list(range(-2, 3))
-        f4_badj = st.selectbox("\U0001f527 BSR Adj", options=ba_opts, index=ba_opts.index(st.session_state.f4_badj))
-        st.session_state.f4_badj = f4_badj
-        _bsce_r = RATING_SCALE[st.session_state.f4_bsce]
-        _col_idx = bsce_to_col(_bsce_r)
-        _row_idx = bank_assets_to_row(st.session_state.f4_ba)
-        _bsr_alpha = BSR_MATRIX[_row_idx][_col_idx]
-        _bsr_score = broad_to_score(_bsr_alpha)
-        _bsr_final = clamp_score(_bsr_score + st.session_state.f4_badj)
-        _bsr_final_alpha = score_to_broad(_bsr_final)
-        st.markdown(f"\u2192 BSR (matrix+adj): **{_bsr_final_alpha.upper()}** \u00b7 score {round(_bsr_final,1)}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Banking Sector Risk (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f4_banking.png"), use_container_width=True)
-        st.markdown("---")
+            st.subheader("\U0001f3e6 Banking Sector Risk")
+            alpha21_opts = [r.upper() for r in RATING_SCALE]
+            col3, col4 = st.columns(2)
+            with col3:
+                f4_bsce = st.selectbox("BSCE", options=alpha21_opts, index=st.session_state.f4_bsce)
+                st.session_state.f4_bsce = alpha21_opts.index(f4_bsce)
+            with col4:
+                f4_ba = st.number_input("Bank Assets/GDP (%)", value=st.session_state.f4_ba,
+                    min_value=0.0, max_value=1500.0, step=0.1, format="%.1f")
+                st.session_state.f4_ba = f4_ba
+            ba_opts = list(range(-2, 3))
+            f4_badj = st.selectbox("\U0001f527 BSR Adj", options=ba_opts, index=ba_opts.index(st.session_state.f4_badj))
+            st.session_state.f4_badj = f4_badj
+            _bsce_r = RATING_SCALE[st.session_state.f4_bsce]
+            _col_idx = bsce_to_col(_bsce_r)
+            _row_idx = bank_assets_to_row(st.session_state.f4_ba)
+            _bsr_alpha = BSR_MATRIX[_row_idx][_col_idx]
+            _bsr_score = broad_to_score(_bsr_alpha)
+            _bsr_final = clamp_score(_bsr_score + st.session_state.f4_badj)
+            _bsr_final_alpha = score_to_broad(_bsr_final)
+            st.markdown(f"\u2192 BSR (matrix+adj): **{_bsr_final_alpha.upper()}** \u00b7 score {round(_bsr_final,1)}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 Banking Sector Risk (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f4_banking.png"), use_container_width=True)
+            st.markdown("---")
 
-        st.subheader("\U0001f310 External Vulnerability Risk")
-        f4_ext_sel = st.selectbox("\U0001f310 External Vulnerability Risk",
-            options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext)
-        st.session_state.f4_ext = F4_EXTVULN_OPTS.index(f4_ext_sel)
-        _cat_ext = ALPHA_CATS[st.session_state.f4_ext]
-        st.markdown(f"\u2192 Ext. Vulnerability: **{_cat_ext.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ext]}")
-        ext_opts = list(range(-2, 3))
-        f4_eadj = st.selectbox("\U0001f527 EVR Adj", options=ext_opts, index=ext_opts.index(st.session_state.f4_eadj))
-        st.session_state.f4_eadj = f4_eadj
-        _ext_score = ALPHA_SCORES[_cat_ext]
-        _ext_final = clamp_score(_ext_score + st.session_state.f4_eadj)
-        _ext_final_alpha = score_to_broad(_ext_final)
-        st.markdown(f"\u2192 Ext. Vulnerability (adj): **{_ext_final_alpha.upper()}** \u00b7 score {round(_ext_final,1)}")
-        with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 External Vulnerability Risk (PDF)"):
-            st.image(str(ASSETS_DIR / "moody_f4_extvuln.png"), use_container_width=True)
-        st.markdown("---")
+            st.subheader("\U0001f310 External Vulnerability Risk")
+            f4_ext_sel = st.selectbox("\U0001f310 External Vulnerability Risk",
+                options=F4_EXTVULN_OPTS, index=st.session_state.f4_ext)
+            st.session_state.f4_ext = F4_EXTVULN_OPTS.index(f4_ext_sel)
+            _cat_ext = ALPHA_CATS[st.session_state.f4_ext]
+            st.markdown(f"\u2192 Ext. Vulnerability: **{_cat_ext.upper()}** \u00b7 score {ALPHA_SCORES[_cat_ext]}")
+            ext_opts = list(range(-2, 3))
+            f4_eadj = st.selectbox("\U0001f527 EVR Adj", options=ext_opts, index=ext_opts.index(st.session_state.f4_eadj))
+            st.session_state.f4_eadj = f4_eadj
+            _ext_score = ALPHA_SCORES[_cat_ext]
+            _ext_final = clamp_score(_ext_score + st.session_state.f4_eadj)
+            _ext_final_alpha = score_to_broad(_ext_final)
+            st.markdown(f"\u2192 Ext. Vulnerability (adj): **{_ext_final_alpha.upper()}** \u00b7 score {round(_ext_final,1)}")
+            with st.expander("\U0001f4ca Ver tabela da metodologia \u2013 External Vulnerability Risk (PDF)"):
+                st.image(str(ASSETS_DIR / "moody_f4_extvuln.png"), use_container_width=True)
+            st.markdown("---")
 
-        oth_opts = [0, -1, -2]
-        f4_oth = st.selectbox("\U0001f527 Factor 4 Adj \u2013 Outros", options=oth_opts,
-            index=oth_opts.index(st.session_state.f4_oth))
-        st.session_state.f4_oth = f4_oth
-        st.markdown("---")
-        st.markdown("#### Resultado – Factor 4 (SETR) e Rating Final (acumulado)")
-        _f1 = calc_factor1(
-            st.session_state.f1_gdp, st.session_state.f1_mad,
-            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
-        _f2 = calc_factor2(
-            ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
-            ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
-            st.session_state.f2_dh, st.session_state.f2_ao)
-        _f3 = calc_factor3(
-            st.session_state.f3_gg, st.session_state.f3_gr,
-            st.session_state.f3_ir, st.session_state.f3_ig,
-            st.session_state.f3_hc, st.session_state.f3_ec,
-            st.session_state.f3_fc, st.session_state.f3_op,
-            st.session_state.f3_ga, st.session_state.f3_adj)
-        _f4 = calc_factor4(
-            ALPHA_CATS[st.session_state.f4_pol], ALPHA_CATS[st.session_state.f4_ease],
-            st.session_state.f4_refin,
-            RATING_SCALE[st.session_state.f4_bsce],
-            st.session_state.f4_ba, st.session_state.f4_badj,
-            ALPHA_CATS[st.session_state.f4_ext],
-            st.session_state.f4_eadj, st.session_state.f4_oth)
-        _final = calc_final(_f1, _f2, _f3, _f4)
-        _m1, _m2, _m3 = st.columns(3)
-        _m1.metric("SETR (Factor 4)", f"{_f4['setr_alpha'].upper()} · score {_f4['setr_score']:.1f}")
-        _m2.metric("Gov. Financial Strength (acum. F1–F3)", _final['gfs_rating'].upper())
-        _m3.metric("Rating Final (acum. F1–F4)", _final['final_rating'].upper())
-    # ═══════════════════════════════════════════════════════════════════
-    elif page == "🗺️ Mapa de Ratings":
-        st.header("🗺️ Mapa de Ratings – Moody's")
+            oth_opts = [0, -1, -2]
+            f4_oth = st.selectbox("\U0001f527 Factor 4 Adj \u2013 Outros", options=oth_opts,
+                index=oth_opts.index(st.session_state.f4_oth))
+            st.session_state.f4_oth = f4_oth
+            st.markdown("---")
+            st.markdown("#### Resultado – Factor 4 (SETR) e Rating Final (acumulado)")
+            _f1 = calc_factor1(
+                st.session_state.f1_gdp, st.session_state.f1_mad,
+                st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+            _f2 = calc_factor2(
+                ALPHA_CATS[st.session_state.f2_le], ALPHA_CATS[st.session_state.f2_cj],
+                ALPHA_CATS[st.session_state.f2_fp], ALPHA_CATS[st.session_state.f2_mp],
+                st.session_state.f2_dh, st.session_state.f2_ao)
+            _f3 = calc_factor3(
+                st.session_state.f3_gg, st.session_state.f3_gr,
+                st.session_state.f3_ir, st.session_state.f3_ig,
+                st.session_state.f3_hc, st.session_state.f3_ec,
+                st.session_state.f3_fc, st.session_state.f3_op,
+                st.session_state.f3_ga, st.session_state.f3_adj)
+            _f4 = calc_factor4(
+                ALPHA_CATS[st.session_state.f4_pol], ALPHA_CATS[st.session_state.f4_ease],
+                st.session_state.f4_refin,
+                RATING_SCALE[st.session_state.f4_bsce],
+                st.session_state.f4_ba, st.session_state.f4_badj,
+                ALPHA_CATS[st.session_state.f4_ext],
+                st.session_state.f4_eadj, st.session_state.f4_oth)
+            _final = calc_final(_f1, _f2, _f3, _f4)
+            _m1, _m2, _m3 = st.columns(3)
+            _m1.metric("SETR (Factor 4)", f"{_f4['setr_alpha'].upper()} · score {_f4['setr_score']:.1f}")
+            _m2.metric("Gov. Financial Strength (acum. F1–F3)", _final['gfs_rating'].upper())
+            _m3.metric("Rating Final (acum. F1–F4)", _final['final_rating'].upper())
+        # ═══════════════════════════════════════════════════════════════════
+        else:
+            st.header("🏆 Results – Consolidated Scorecard")
+            st.markdown("**Consolidated view of all factors, sub-scores and final rating.**")
+            st.markdown("---")
+
+            alpha_opts_lc = [c.lower() for c in ALPHA_CATS]
+            alpha21_opts_lc = [r.lower() for r in RATING_SCALE]
+
+            f1 = calc_factor1(
+                st.session_state.f1_gdp, st.session_state.f1_mad,
+                st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
+            f2 = calc_factor2(
+                alpha_opts_lc[st.session_state.f2_le], alpha_opts_lc[st.session_state.f2_cj],
+                alpha_opts_lc[st.session_state.f2_fp], alpha_opts_lc[st.session_state.f2_mp],
+                st.session_state.f2_dh, st.session_state.f2_ao)
+            f3 = calc_factor3(
+                st.session_state.f3_gg, st.session_state.f3_gr,
+                st.session_state.f3_ir, st.session_state.f3_ig,
+                st.session_state.f3_hc, st.session_state.f3_ec,
+                st.session_state.f3_fc, st.session_state.f3_op,
+                st.session_state.f3_ga, st.session_state.f3_adj)
+            f4 = calc_factor4(
+                alpha_opts_lc[st.session_state.f4_pol], alpha_opts_lc[st.session_state.f4_ease],
+                st.session_state.f4_refin,
+                alpha21_opts_lc[st.session_state.f4_bsce],
+                st.session_state.f4_ba, st.session_state.f4_badj,
+                alpha_opts_lc[st.session_state.f4_ext],
+                st.session_state.f4_eadj, st.session_state.f4_oth)
+            final = calc_final(f1, f2, f3, f4)
+
+            # Rating Final em destaque
+            st.subheader("🏆 Scorecard-Indicated Outcome")
+            rc1, rc2, rc3 = st.columns([1, 1, 1])
+            with rc1:
+                st.markdown(f"**Rating Final:** {rating_badge(final['final_rating'])}", unsafe_allow_html=True)
+            with rc2:
+                hi = RATING_SCALE[max(0, RATING_SCALE.index(final['final_rating'])-1)]
+                lo = RATING_SCALE[min(19, RATING_SCALE.index(final['final_rating'])+1)]
+                st.markdown(f"**Range:** {rating_badge(hi)} – {rating_badge(lo)}", unsafe_allow_html=True)
+            with rc3:
+                st.metric("Economic Resiliency Score", f"{final['er_score']}")
+
+            st.markdown("---")
+
+            # Fatores & Combinações
+            st.subheader("🔹 Fatores & Combinações")
+            c1, c2, c3, c4 = st.columns(4)
+            with c1:
+                st.markdown("**Factor 1 – Economic Strength**")
+                st.markdown(rating_badge(f1["rating"]), unsafe_allow_html=True)
+                st.caption(f"Score: {f1['final']:.2f}")
+            with c2:
+                st.markdown("**Factor 2 – Institutions & Gov.**")
+                st.markdown(rating_badge(f2["rating"]), unsafe_allow_html=True)
+                st.caption(f"Score: {f2['final']:.2f}")
+            with c3:
+                st.markdown("**↳ Economic Resiliency**")
+                st.markdown(rating_badge(final["er_rating"]), unsafe_allow_html=True)
+                st.caption(f"Score: {final['er_score']} = round(({f1['final']:.2f} + {f2['final']:.2f}) / 2)")
+            with c4:
+                st.markdown("**Factor 3 – Fiscal Strength**")
+                st.markdown(rating_badge(f3["rating"]), unsafe_allow_html=True)
+                st.caption(f"Score: {f3['final']:.2f}")
+
+            st.markdown("")
+            c5, c6, c7 = st.columns(3)
+            with c5:
+                st.markdown("**↳ Gov. Financial Strength**")
+                st.markdown(rating_badge(final["gfs_rating"]), unsafe_allow_html=True)
+                st.caption(f"= GFS_MATRIX[{final['er_rating'].upper()}][{f3['rating'].upper()}]")
+            with c6:
+                st.markdown("**Factor 4 – SETR**")
+                setr_r = RATING_SCALE[min(19, ALPHA_SCORES.get(f4["setr_alpha"], 20) - 1)]
+                st.markdown(rating_badge(setr_r), unsafe_allow_html=True)
+                st.caption(f"Categoria: {f4['setr_alpha'].upper()} | Score: {f4['setr_score']:.1f}")
+            with c7:
+                st.markdown("**🏆 Rating Final**")
+                st.markdown(rating_badge(final["final_rating"]), unsafe_allow_html=True)
+                st.caption(f"Range: **{final['range']}**")
+
+            st.markdown("---")
+
+            # Detalhes Factor 1
+            st.subheader("📊 Factor 1 – Sub-scores")
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            for col, lb, v, w in zip([sc1, sc2, sc3, sc4],
+                    ["Avg GDP Growth", "MAD Volatility", "Nominal GDP", "GDP per Capita"],
+                    [f1["gdp"], f1["mad"], f1["nom"], f1["pc"]], ["25%", "10%", "30%", "35%"]):
+                with col:
+                    r = score_to_alpha21(round(v))
+                    st.metric(f"{lb} ({w})", f"{v:.2f} → {r.upper()}")
+            mc1, mc2 = st.columns(2)
+            with mc1:
+                st.metric("Score Ponderado", f"{f1['weighted']:.2f}")
+            with mc2:
+                st.metric("Ajuste Aplicado", f"{f1['adj']:+d}")
+
+            st.markdown("---")
+
+            # Detalhes Factor 2
+            st.subheader("📊 Factor 2 – Sub-scores")
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            for col, lb, k in zip([sc1, sc2, sc3, sc4],
+                    ["Leg. & Exec. (20%)", "Civil & Jud. (20%)", "Fiscal Pol. (30%)", "Monetary Pol. (30%)"],
+                    ["legexec", "civiljud", "fiscal", "monetary"]):
+                with col:
+                    v = f2["scores"][k]
+                    r = score_to_alpha21(round(v))
+                    st.metric(lb, f"{v} → {r.upper()}")
+            mc1, mc2 = st.columns(2)
+            with mc1:
+                st.metric("Score Ponderado", f"{f2['weighted']:.2f}")
+            with mc2:
+                st.metric("Total Ajustes", f"{f2['total_adj']:+d}")
+
+            st.markdown("---")
+
+            # Detalhes Factor 3
+            st.subheader("📊 Factor 3 – Sub-scores")
+            sc1, sc2, sc3, sc4 = st.columns(4)
+            for col, lb, v in zip([sc1, sc2, sc3, sc4],
+                    ["GGGD/GDP", "GGGD/Revenue", "Int./Revenue", "Int./GDP"],
+                    [f3["s1"], f3["s2"], f3["s3"], f3["s4"]]):
+                with col:
+                    r = score_to_alpha21(round(v))
+                    st.metric(f"{lb} (25%)", f"{v:.2f} → {r.upper()}")
+            st.markdown("**Ajustes Automáticos:**")
+            adj_names = ["Mud. Hist. Dív/GDP", "Mud. Esp. Dív/GDP", "FC Debt/GGGD",
+                         "Outra Dív. Pub./GDP", "Ativos Gov./GDP", "Outros"]
+            adj_vals = [f3["a_hist"], f3["a_exp"], f3["a_fc"], f3["a_opsd"], f3["a_ga"], f3["a_other"]]
+            adj_cols = st.columns(6)
+            for col, nm, av in zip(adj_cols, adj_names, adj_vals):
+                with col:
+                    color = "🟢" if av > 0 else ("🔴" if av < 0 else "⚪")
+                    st.metric(nm, f"{av:+d} {color}")
+            mc1, mc2 = st.columns(2)
+            with mc1:
+                st.metric("Score Ponderado", f"{f3['weighted']:.2f}")
+            with mc2:
+                st.metric("Total Ajustes", f"{f3['total_adj']:+d}")
+
+            st.markdown("---")
+
+            # Detalhes Factor 4
+            st.subheader("📊 Factor 4 – Sub-fatores")
+            sf_cols = st.columns(4)
+            for i, (name, val) in enumerate(f4["sub_scores"].items()):
+                with sf_cols[i]:
+                    st.metric(name, val.upper())
+
+            st.markdown("---")
+
+            # Tabela Resumo
+            st.subheader("📋 Tabela Resumo")
+            summary_rows = [
+                ["Factor 1 – Economic Strength", f"{f1['final']:.2f}", f1["rating"].upper()],
+                ["Factor 2 – Institutions & Governance", f"{f2['final']:.2f}", f2["rating"].upper()],
+                ["Economic Resiliency (F1+F2)/2", str(final["er_score"]), final["er_rating"].upper()],
+                ["Factor 3 – Fiscal Strength", f"{f3['final']:.2f}", f3["rating"].upper()],
+                ["Gov. Financial Strength", "—", final["gfs_rating"].upper()],
+                ["Factor 4 – SETR", f"{f4['setr_score']:.1f}", f4["setr_alpha"].upper()],
+                ["**Scorecard-Indicated Outcome**", "—", f"**{final['final_rating'].upper()}**"],
+                ["**Rating Range**", "—", f"**{final['range']}**"],
+            ]
+            st.markdown(
+                "| Componente | Score | Rating |\n|---|---|---|\n"
+                + "\n".join([f"| {r[0]} | {r[1]} | {r[2]} |" for r in summary_rows]),
+                unsafe_allow_html=True,
+            )
+
+            st.markdown("---")
+            st.caption(
+                "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
+                "Os resultados são indicativos e não substituem a análise oficial da agência."
+            )
+
+    with tab_map:
+        st.title("🗺️ Mapa de Ratings – Moody's")
         render_ratings_map_moody(moody_df)
-    else:
-        st.header("🏆 Results – Consolidated Scorecard")
-        st.markdown("**Consolidated view of all factors, sub-scores and final rating.**")
-        st.markdown("---")
-
-        alpha_opts_lc = [c.lower() for c in ALPHA_CATS]
-        alpha21_opts_lc = [r.lower() for r in RATING_SCALE]
-
-        f1 = calc_factor1(
-            st.session_state.f1_gdp, st.session_state.f1_mad,
-            st.session_state.f1_nom, st.session_state.f1_pc, st.session_state.f1_adj)
-        f2 = calc_factor2(
-            alpha_opts_lc[st.session_state.f2_le], alpha_opts_lc[st.session_state.f2_cj],
-            alpha_opts_lc[st.session_state.f2_fp], alpha_opts_lc[st.session_state.f2_mp],
-            st.session_state.f2_dh, st.session_state.f2_ao)
-        f3 = calc_factor3(
-            st.session_state.f3_gg, st.session_state.f3_gr,
-            st.session_state.f3_ir, st.session_state.f3_ig,
-            st.session_state.f3_hc, st.session_state.f3_ec,
-            st.session_state.f3_fc, st.session_state.f3_op,
-            st.session_state.f3_ga, st.session_state.f3_adj)
-        f4 = calc_factor4(
-            alpha_opts_lc[st.session_state.f4_pol], alpha_opts_lc[st.session_state.f4_ease],
-            st.session_state.f4_refin,
-            alpha21_opts_lc[st.session_state.f4_bsce],
-            st.session_state.f4_ba, st.session_state.f4_badj,
-            alpha_opts_lc[st.session_state.f4_ext],
-            st.session_state.f4_eadj, st.session_state.f4_oth)
-        final = calc_final(f1, f2, f3, f4)
-
-        # Rating Final em destaque
-        st.subheader("🏆 Scorecard-Indicated Outcome")
-        rc1, rc2, rc3 = st.columns([1, 1, 1])
-        with rc1:
-            st.markdown(f"**Rating Final:** {rating_badge(final['final_rating'])}", unsafe_allow_html=True)
-        with rc2:
-            hi = RATING_SCALE[max(0, RATING_SCALE.index(final['final_rating'])-1)]
-            lo = RATING_SCALE[min(19, RATING_SCALE.index(final['final_rating'])+1)]
-            st.markdown(f"**Range:** {rating_badge(hi)} – {rating_badge(lo)}", unsafe_allow_html=True)
-        with rc3:
-            st.metric("Economic Resiliency Score", f"{final['er_score']}")
-
-        st.markdown("---")
-
-        # Fatores & Combinações
-        st.subheader("🔹 Fatores & Combinações")
-        c1, c2, c3, c4 = st.columns(4)
-        with c1:
-            st.markdown("**Factor 1 – Economic Strength**")
-            st.markdown(rating_badge(f1["rating"]), unsafe_allow_html=True)
-            st.caption(f"Score: {f1['final']:.2f}")
-        with c2:
-            st.markdown("**Factor 2 – Institutions & Gov.**")
-            st.markdown(rating_badge(f2["rating"]), unsafe_allow_html=True)
-            st.caption(f"Score: {f2['final']:.2f}")
-        with c3:
-            st.markdown("**↳ Economic Resiliency**")
-            st.markdown(rating_badge(final["er_rating"]), unsafe_allow_html=True)
-            st.caption(f"Score: {final['er_score']} = round(({f1['final']:.2f} + {f2['final']:.2f}) / 2)")
-        with c4:
-            st.markdown("**Factor 3 – Fiscal Strength**")
-            st.markdown(rating_badge(f3["rating"]), unsafe_allow_html=True)
-            st.caption(f"Score: {f3['final']:.2f}")
-
-        st.markdown("")
-        c5, c6, c7 = st.columns(3)
-        with c5:
-            st.markdown("**↳ Gov. Financial Strength**")
-            st.markdown(rating_badge(final["gfs_rating"]), unsafe_allow_html=True)
-            st.caption(f"= GFS_MATRIX[{final['er_rating'].upper()}][{f3['rating'].upper()}]")
-        with c6:
-            st.markdown("**Factor 4 – SETR**")
-            setr_r = RATING_SCALE[min(19, ALPHA_SCORES.get(f4["setr_alpha"], 20) - 1)]
-            st.markdown(rating_badge(setr_r), unsafe_allow_html=True)
-            st.caption(f"Categoria: {f4['setr_alpha'].upper()} | Score: {f4['setr_score']:.1f}")
-        with c7:
-            st.markdown("**🏆 Rating Final**")
-            st.markdown(rating_badge(final["final_rating"]), unsafe_allow_html=True)
-            st.caption(f"Range: **{final['range']}**")
-
-        st.markdown("---")
-
-        # Detalhes Factor 1
-        st.subheader("📊 Factor 1 – Sub-scores")
-        sc1, sc2, sc3, sc4 = st.columns(4)
-        for col, lb, v, w in zip([sc1, sc2, sc3, sc4],
-                ["Avg GDP Growth", "MAD Volatility", "Nominal GDP", "GDP per Capita"],
-                [f1["gdp"], f1["mad"], f1["nom"], f1["pc"]], ["25%", "10%", "30%", "35%"]):
-            with col:
-                r = score_to_alpha21(round(v))
-                st.metric(f"{lb} ({w})", f"{v:.2f} → {r.upper()}")
-        mc1, mc2 = st.columns(2)
-        with mc1:
-            st.metric("Score Ponderado", f"{f1['weighted']:.2f}")
-        with mc2:
-            st.metric("Ajuste Aplicado", f"{f1['adj']:+d}")
-
-        st.markdown("---")
-
-        # Detalhes Factor 2
-        st.subheader("📊 Factor 2 – Sub-scores")
-        sc1, sc2, sc3, sc4 = st.columns(4)
-        for col, lb, k in zip([sc1, sc2, sc3, sc4],
-                ["Leg. & Exec. (20%)", "Civil & Jud. (20%)", "Fiscal Pol. (30%)", "Monetary Pol. (30%)"],
-                ["legexec", "civiljud", "fiscal", "monetary"]):
-            with col:
-                v = f2["scores"][k]
-                r = score_to_alpha21(round(v))
-                st.metric(lb, f"{v} → {r.upper()}")
-        mc1, mc2 = st.columns(2)
-        with mc1:
-            st.metric("Score Ponderado", f"{f2['weighted']:.2f}")
-        with mc2:
-            st.metric("Total Ajustes", f"{f2['total_adj']:+d}")
-
-        st.markdown("---")
-
-        # Detalhes Factor 3
-        st.subheader("📊 Factor 3 – Sub-scores")
-        sc1, sc2, sc3, sc4 = st.columns(4)
-        for col, lb, v in zip([sc1, sc2, sc3, sc4],
-                ["GGGD/GDP", "GGGD/Revenue", "Int./Revenue", "Int./GDP"],
-                [f3["s1"], f3["s2"], f3["s3"], f3["s4"]]):
-            with col:
-                r = score_to_alpha21(round(v))
-                st.metric(f"{lb} (25%)", f"{v:.2f} → {r.upper()}")
-        st.markdown("**Ajustes Automáticos:**")
-        adj_names = ["Mud. Hist. Dív/GDP", "Mud. Esp. Dív/GDP", "FC Debt/GGGD",
-                     "Outra Dív. Pub./GDP", "Ativos Gov./GDP", "Outros"]
-        adj_vals = [f3["a_hist"], f3["a_exp"], f3["a_fc"], f3["a_opsd"], f3["a_ga"], f3["a_other"]]
-        adj_cols = st.columns(6)
-        for col, nm, av in zip(adj_cols, adj_names, adj_vals):
-            with col:
-                color = "🟢" if av > 0 else ("🔴" if av < 0 else "⚪")
-                st.metric(nm, f"{av:+d} {color}")
-        mc1, mc2 = st.columns(2)
-        with mc1:
-            st.metric("Score Ponderado", f"{f3['weighted']:.2f}")
-        with mc2:
-            st.metric("Total Ajustes", f"{f3['total_adj']:+d}")
-
-        st.markdown("---")
-
-        # Detalhes Factor 4
-        st.subheader("📊 Factor 4 – Sub-fatores")
-        sf_cols = st.columns(4)
-        for i, (name, val) in enumerate(f4["sub_scores"].items()):
-            with sf_cols[i]:
-                st.metric(name, val.upper())
-
-        st.markdown("---")
-
-        # Tabela Resumo
-        st.subheader("📋 Tabela Resumo")
-        summary_rows = [
-            ["Factor 1 – Economic Strength", f"{f1['final']:.2f}", f1["rating"].upper()],
-            ["Factor 2 – Institutions & Governance", f"{f2['final']:.2f}", f2["rating"].upper()],
-            ["Economic Resiliency (F1+F2)/2", str(final["er_score"]), final["er_rating"].upper()],
-            ["Factor 3 – Fiscal Strength", f"{f3['final']:.2f}", f3["rating"].upper()],
-            ["Gov. Financial Strength", "—", final["gfs_rating"].upper()],
-            ["Factor 4 – SETR", f"{f4['setr_score']:.1f}", f4["setr_alpha"].upper()],
-            ["**Scorecard-Indicated Outcome**", "—", f"**{final['final_rating'].upper()}**"],
-            ["**Rating Range**", "—", f"**{final['range']}**"],
-        ]
-        st.markdown(
-            "| Componente | Score | Rating |\n|---|---|---|\n"
-            + "\n".join([f"| {r[0]} | {r[1]} | {r[2]} |" for r in summary_rows]),
-            unsafe_allow_html=True,
-        )
-
-        st.markdown("---")
-        st.caption(
-            "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
-            "Os resultados são indicativos e não substituem a análise oficial da agência."
-        )
 
 
 # ============================================================

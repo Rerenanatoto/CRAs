@@ -1976,20 +1976,20 @@ def render_sp():
         with st.expander("Filtros do SRI", expanded=False):
             filtered = build_filters(df)
 
-    tab1, tab2, tab3, tab4 = st.tabs([
-        "Metodologia", "SRI – Dashboards", "SRI – Dados em tabela", "🗺️ Mapa de Ratings",
+    tab_met, tab_dash, tab_data, tab_map = st.tabs([
+        "📘 Metodologia", "📊 SRI – Dashboards", "📋 SRI – Dados", "🗺️ Mapa de Ratings",
     ])
 
-    with tab1:
+    with tab_met:
         render_methodology_tab()
 
-    with tab2:
+    with tab_dash:
         if df.empty or filtered is None:
             st.error("Não foi possível interpretar a estrutura do workbook.")
         else:
             render_dashboard_tab(filtered)
 
-    with tab3:
+    with tab_data:
         if df.empty or filtered is None:
             st.error("Não foi possível interpretar a estrutura do workbook.")
         else:
@@ -2009,7 +2009,7 @@ def render_sp():
                     """
                 )
 
-    with tab4:
+    with tab_map:
         st.title("🗺️ Mapa de Ratings – S&P")
         if df.empty:
             st.info("⬅️ Carregue o arquivo SRI para ativar o mapa.")
