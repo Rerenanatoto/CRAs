@@ -236,7 +236,7 @@ SRM_XLSB_MAP = {
     "gdp_per_capita_percentile": {"indicators": ["GDP per cap"], "unit_hint": None, "section_hint": "INCOME", "measure": "latest", "transform": "percentile_rank"},
     "share_world_gdp_log": {"indicators": ["GDP"], "unit_hint": "USDbn", "section_hint": "DOMESTIC", "exclude": ["per cap", "real", "volat", "growth"], "measure": "latest", "transform": "world_gdp_share_log"},
     "years_since_default_transform": {"indicators": ["SRM-inverse", "SRM inverse", "yrs since"], "measure": "latest", "transform": None},
-    "money_supply_log": {"indicators": ["Broad money"], "unit_hint": "GDP", "section_hint": "MONEY", "measure": "latest", "transform": "log"},
+    "money_supply_log": {"indicators": ["Broad money", "Broad Money", "broad money"], "unit_hint": "GDP", "measure": "latest", "transform": "log"},
     "real_gdp_growth_volatility_log": {"indicators": ["GDP volat"], "unit_hint": "Exp mov", "measure": "latest", "transform": "log"},
     "consumer_price_inflation": {"indicators": ["Consumer price", "Consumer prices"], "section_hint": "DOMESTIC", "measure": "3yr_avg", "transform": "truncate_2_50"},
     "real_gdp_growth": {"indicators": ["Real GDP growth"], "section_hint": "DOMESTIC", "exclude": ["volat"], "measure": "3yr_avg", "transform": None},
@@ -258,8 +258,12 @@ def _find_indicator_rows(df_c, patterns, unit_hint=None, section_hint=None, excl
         return pd.DataFrame()
     mask = pd.Series(False, index=df_c.index)
     ind_lower = df_c["indicator"].str.lower()
+    # Also search subsection: some Fitch editions place the indicator label in row 7
+    sub_lower = df_c["subsection"].str.lower() if "subsection" in df_c.columns else pd.Series("", index=df_c.index)
     for pat in patterns:
-        mask = mask | ind_lower.str.contains(pat.lower(), na=False, regex=False)
+        pat_l = pat.lower()
+        mask = mask | ind_lower.str.contains(pat_l, na=False, regex=False)
+        mask = mask | sub_lower.str.contains(pat_l, na=False, regex=False)
     if unit_hint:
         u = df_c["unit"].str.lower() if "unit" in df_c.columns else pd.Series("", index=df_c.index)
         mask = mask & u.str.contains(unit_hint.lower(), na=False, regex=False)
@@ -269,6 +273,7 @@ def _find_indicator_rows(df_c, patterns, unit_hint=None, section_hint=None, excl
     if exclude:
         for ex in exclude:
             mask = mask & ~ind_lower.str.contains(ex.lower(), na=False, regex=False)
+            mask = mask & ~sub_lower.str.contains(ex.lower(), na=False, regex=False)
     return df_c[mask]
 
 
