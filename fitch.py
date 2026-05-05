@@ -1252,7 +1252,7 @@ O intercepto OLS é **{intercept:.3f}**.
     _scale_df = pd.DataFrame(srm_scale_data)
     st.dataframe(_scale_df, use_container_width=False, hide_index=True)
     with st.expander("📷 Ver tabela da metodologia (imagem)"):
-        _scale_img = ASSETS_DIR / "page_06_img_01.png"
+        _scale_img = APP_DIR / "assets" / "page_06_img_01.png"
         if _scale_img.exists():
             st.image(str(_scale_img), caption="SRM Correspondence Table – Fitch Ratings", use_container_width=True)
         else:

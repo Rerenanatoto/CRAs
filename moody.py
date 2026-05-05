@@ -717,19 +717,19 @@ def render_moody():
         # FACTOR 1 – ECONOMIC STRENGTH
         # ═══════════════════════════════════════════════════════════════════
         if page == "Visão geral":
-            st.header("📋 Methodology Overview")
+            st.header("📋 Visão Geral da Metodologia")
             st.markdown(
                 "The Moody\u2019s Sovereign Rating Methodology (Nov 2022) combines **four broad factors** "
-                "into a final indicative sovereign rating:\n\n"
+                "em um rating soberano indicativo final:\n\n"
                 "1. **Economic Strength** \u2014 quantitative metrics: GDP growth, volatility, nominal GDP, GDP per capita.\n"
                 "2. **Institutions & Governance** \u2014 qualitative assessment of institutional quality and policy effectiveness, "
-                "anchored to World Governance Indicators (WGI).\n"
+                "ancorada nos Indicadores de Governança Mundial (WGI).\n"
                 "3. **Fiscal Strength** \u2014 quantitative metrics: debt/GDP, debt/revenue, interest/revenue, interest/GDP, plus adjustments.\n"
                 "4. **Susceptibility to Event Risk (SETR)** \u2014 qualitative/quantitative: political risk, government liquidity, "
-                "banking sector risk, and external vulnerability. The SETR is the **worst** of the 4 sub-factors.\n\n"
-                "Factors 1 and 2 combine into **Economic Resiliency (ER)**. "
-                "ER is combined with Factor 3 via the **GFS matrix** to produce the **Government Financial Strength (GFS)**. "
-                "Finally, GFS is combined with SETR via the **Final matrix** to produce the **Indicative Sovereign Rating**."
+                "risco do setor bancário e vulnerabilidade externa. O SETR é o **pior** dos 4 subfatores.\n\n"
+                "Os Fatores 1 e 2 se combinam em **Resiliência Econômica (ER)**. "
+                "A ER é combinada com o Fator 3 por meio da **matriz GFS** para produzir a **Força Financeira do Governo (GFS)**. "
+                "Por fim, a GFS é combinada com o SETR via **Matriz Final** para produzir o **Rating Soberano Indicativo**."
             )
             st.subheader("Estrutura do Scorecard")
             st.image(str(ASSETS_DIR / "moody_framework.png"), use_container_width=True)
@@ -740,15 +740,15 @@ def render_moody():
             st.subheader("WGI \u2013 World Governance Indicators")
             st.markdown(
                 "Several sub-factors in Factors 2 and 4 are anchored to the **World Bank\u2019s Worldwide Governance Indicators (WGI)**. "
-                "The acronyms used in the dropdown options refer to:\n\n"
-                "| Acronym | Full Name | Used in |\n"
+                "As siglas utilizadas nas opções de seleção referem-se a:\n\n"
+                "| Sigla | Nome Completo | Usado em |\n"
                 "|---|---|---|\n"
                 "| **GE** | Government Effectiveness | Factor 2 \u2013 Quality of Leg. & Exec. Institutions |\n"
                 "| **RL** | Rule of Law | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
                 "| **CC** | Control of Corruption | Factor 2 \u2013 Strength of Civil Society & Judiciary |\n"
                 "| **VA** | Voice & Accountability | Factor 4 \u2013 Political Risk |\n"
                 "| **PS** | Political Stability & Absence of Violence | Factor 4 \u2013 Political Risk |\n\n"
-                "WGI scores range from approximately **-2.5** (weak) to **+2.5** (strong)."
+                "Os scores WGI variam de aproximadamente **-2,5** (fraco) a **+2,5** (forte)."
             )
             st.markdown("---")
             st.subheader("Escala de Pontuação (Exhibits 14 e 15)")
