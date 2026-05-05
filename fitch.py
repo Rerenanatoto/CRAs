@@ -236,7 +236,7 @@ SRM_XLSB_MAP = {
     "gdp_per_capita_percentile": {"indicators": ["GDP per cap"], "unit_hint": None, "section_hint": "INCOME", "measure": "latest", "transform": "percentile_rank"},
     "share_world_gdp_log": {"indicators": ["GDP"], "unit_hint": "USDbn", "section_hint": "DOMESTIC", "exclude": ["per cap", "real", "volat", "growth"], "measure": "latest", "transform": "world_gdp_share_log"},
     "years_since_default_transform": {"indicators": ["SRM-inverse", "SRM inverse", "yrs since"], "measure": "latest", "transform": None},
-    "money_supply_log": {"indicators": ["Broad money"], "unit_hint": "% GDP", "section_hint": "MONEY", "measure": "latest", "transform": "log"},
+    "money_supply_log": {"indicators": ["Broad money"], "unit_hint": "GDP", "section_hint": "MONEY", "measure": "latest", "transform": "log"},
     "real_gdp_growth_volatility_log": {"indicators": ["GDP volat"], "unit_hint": "Exp mov", "measure": "latest", "transform": "log"},
     "consumer_price_inflation": {"indicators": ["Consumer price", "Consumer prices"], "section_hint": "DOMESTIC", "measure": "3yr_avg", "transform": "truncate_2_50"},
     "real_gdp_growth": {"indicators": ["Real GDP growth"], "section_hint": "DOMESTIC", "exclude": ["volat"], "measure": "3yr_avg", "transform": None},
@@ -247,7 +247,7 @@ SRM_XLSB_MAP = {
     "reserve_currency_flexibility": {"indicators": ["SRM-reserve", "SRM reserve"], "measure": "latest", "transform": None},
     "sovereign_net_foreign_s": {"indicators": ["SNFA", "Sovereign net foreign"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
     "commodity_dependence": {"indicators": ["Comm. dep", "Commodity dep", "commodity depend"], "measure": "latest", "transform": None},
-    "fx_reserves_months_cxp": {"indicators": ["Reserves", "FX reserves"], "unit_hint": "months", "measure": "latest", "transform": None},
+    "fx_reserves_months_cxp": {"indicators": ["Reserves (months", "months of CXP", "months CXP", "Reserves", "FX reserves"], "unit_hint": "months", "section_hint": "EXTERNAL", "measure": "latest", "transform": None},
     "external_interest_service": {"indicators": ["Ext. int", "External interest"], "unit_hint": "% CXR", "exclude": ["% GDP"], "measure": "3yr_avg", "transform": None},
     "cab_plus_net_fdi": {"indicators": ["CAB+Net FDI", "CAB + Net FDI", "CAB+net FDI"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
 }
@@ -292,6 +292,17 @@ def _get_latest_val(df_ind):
         v = valid["value"].dropna()
         if not v.empty:
             return float(v.iloc[0])
+    # Fallback: rows flagged as average (e.g. period="Average", "Avg.", "3yr avg")
+    if "is_average" in df_ind.columns:
+        avg_rows = df_ind[df_ind["is_average"] == True]
+        if not avg_rows.empty:
+            v = avg_rows["value"].dropna()
+            if not v.empty:
+                return float(v.iloc[0])
+    # Final fallback: any row with a valid value (handles "LFY", "Most Recent", etc.)
+    v = df_ind["value"].dropna()
+    if not v.empty:
+        return float(v.iloc[0])
     return None
 
 
