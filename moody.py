@@ -3,7 +3,12 @@ import math
 import os
 import re
 import hashlib
+import io
 from pathlib import Path
+
+import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 
 
 APP_DIR = Path(__file__).resolve().parent
@@ -635,6 +640,29 @@ def render_moody():
     st.title("🏛️ Moody's Sovereign Rating Model")
     st.caption("Baseado em: Moody's Sovereign Rating Methodology, Nov/2022")
 
+    # ── Sidebar: Moody's ratings Excel uploader ──────────────────────
+    st.sidebar.markdown("---")
+    st.sidebar.subheader("📊 Moody's Ratings Excel")
+    uploaded_moody_xl = st.sidebar.file_uploader(
+        "Sovereign Ratings Summary (.xlsx)",
+        type=["xlsx"],
+        key="moody_ratings_xl_upload",
+    )
+    moody_df = pd.DataFrame()
+    if uploaded_moody_xl is not None:
+        moody_df = _parse_moody_xlsx(uploaded_moody_xl.getvalue())
+        if not moody_df.empty:
+            st.sidebar.success(f"✅ {len(moody_df)} países carregados")
+        else:
+            st.sidebar.warning("⚠️ Não foi possível extrair ratings do arquivo.")
+    else:
+        local_xl = _find_local_moody_xlsx()
+        if local_xl is not None:
+            moody_df = _parse_moody_xlsx(local_xl.read_bytes())
+            st.sidebar.info(f"📁 Usando arquivo local: {local_xl.name}")
+        else:
+            st.sidebar.info("Envie o arquivo Excel de ratings Moody's para ativar o mapa.")
+
     page = st.selectbox("📌 Section", [
         "📋 Overview",
         "1️⃣ Economic Strength",
@@ -642,6 +670,7 @@ def render_moody():
         "3️⃣ Fiscal Strength",
         "4️⃣ Susceptibility to Event Risk",
         "🏆 Results",
+        "🗺️ Mapa de Ratings",
     ], key="moody_page")
 
     st.markdown("---")
@@ -1074,6 +1103,9 @@ def render_moody():
         _m2.metric("Gov. Financial Strength (acum. F1–F3)", _final['gfs_rating'].upper())
         _m3.metric("Rating Final (acum. F1–F4)", _final['final_rating'].upper())
     # ═══════════════════════════════════════════════════════════════════
+    elif page == "🗺️ Mapa de Ratings":
+        st.header("🗺️ Mapa de Ratings – Moody's")
+        render_ratings_map_moody(moody_df)
     else:
         st.header("🏆 Results – Consolidated Scorecard")
         st.markdown("**Consolidated view of all factors, sub-scores and final rating.**")
@@ -1248,5 +1280,178 @@ def render_moody():
         st.caption(
             "⚠️ Este modelo é uma reprodução didática da metodologia Moody's (Nov/2022). "
             "Os resultados são indicativos e não substituem a análise oficial da agência."
+        )
+
+
+# ============================================================
+# Ratings Map – Moody's
+# ============================================================
+
+DATA_DIR = APP_DIR / "data"
+
+# Moody's LT scale in display form (mixed-case as published)
+_MOODY_LT_SCALE = [
+    "Aaa", "Aa1", "Aa2", "Aa3",
+    "A1", "A2", "A3",
+    "Baa1", "Baa2", "Baa3",
+    "Ba1", "Ba2", "Ba3",
+    "B1", "B2", "B3",
+    "Caa1", "Caa2", "Caa3",
+    "Ca", "C",
+]
+
+_MOODY_RATING_COLORS = {
+    "Aaa":  "#440154", "Aa1":  "#482475", "Aa2":  "#414487", "Aa3":  "#355f8d",
+    "A1":   "#2a788e", "A2":   "#21918c", "A3":   "#22a884",
+    "Baa1": "#42be71", "Baa2": "#7ad151", "Baa3": "#bddf26",
+    "Ba1":  "#fde725", "Ba2":  "#fbbf24", "Ba3":  "#f97316",
+    "B1":   "#ef4444", "B2":   "#dc2626", "B3":   "#b91c1c",
+    "Caa1": "#991b1b", "Caa2": "#7f1d1d", "Caa3": "#6b0000",
+    "Ca":   "#4a0000", "C":    "#2d0000",
+}
+
+_MOODY_COUNTRY_NAME_MAP = {
+    "United States":          "United States of America",
+    "Korea, Republic of":     "South Korea",
+    "Korea, South":           "South Korea",
+    "Russia":                 "Russia",
+    "Czech Republic":         "Czechia",
+    "Ivory Coast":            "Côte d'Ivoire",
+    "Tanzania":               "United Republic of Tanzania",
+    "Congo, Dem. Rep.":       "Democratic Republic of the Congo",
+    "Congo, Rep.":            "Republic of the Congo",
+    "Eswatini":               "Swaziland",
+    "Türkiye":                "Turkey",
+    "Bosnia & Herzegovina":   "Bosnia and Herzegovina",
+    "Trinidad & Tobago":      "Trinidad and Tobago",
+    "Hong Kong":              "China",  # plotly maps HK separately – keep as-is
+}
+
+
+def _find_local_moody_xlsx() -> Path | None:
+    """Return the first Moody's Sovereign ratings .xlsx found in data/."""
+    patterns = ["Sovereign-Supranational-Rating*.xlsx", "moody*sovereign*.xlsx",
+                "Moody*Sovereign*.xlsx"]
+    if DATA_DIR.exists():
+        for pat in patterns:
+            files = sorted([p for p in DATA_DIR.glob(pat) if not p.name.startswith("~$")])
+            if files:
+                return files[-1]  # most recent (alphabetically last)
+    return None
+
+
+@st.cache_data(show_spinner=False)
+def _parse_moody_xlsx(file_bytes: bytes) -> pd.DataFrame:
+    """Parse 'Sovereign Ratings Summary' sheet → DataFrame with country / lt_fc_rating."""
+    try:
+        df_raw = pd.read_excel(
+            io.BytesIO(file_bytes),
+            sheet_name="Sovereign Ratings Summary",
+            header=None,
+            engine="openpyxl",
+        )
+    except Exception:
+        return pd.DataFrame()
+
+    # Country in col 1, LT FC rating in col 3, data starts at row 9 (0-indexed)
+    df = df_raw[[1, 3]].iloc[8:].copy()
+    df.columns = ["country_name", "lt_fc_rating"]
+    df["country_name"] = df["country_name"].astype(str).str.strip()
+    df["lt_fc_rating"] = df["lt_fc_rating"].astype(str).str.strip()
+    df = df[
+        df["country_name"].ne("") &
+        df["country_name"].ne("nan") &
+        df["lt_fc_rating"].ne("") &
+        df["lt_fc_rating"].ne("nan") &
+        df["lt_fc_rating"].ne("-") &
+        df["lt_fc_rating"].ne("WR")
+    ].drop_duplicates("country_name").copy()
+    return df
+
+
+def render_ratings_map_moody(moody_df: pd.DataFrame):
+    """Aba 🗺️ Mapa de Ratings Moody's – mapa mundial."""
+    if moody_df is None or moody_df.empty:
+        st.info("⬅️ Carregue o arquivo Excel de ratings Moody's para ativar o mapa.")
+        return
+
+    ratings_df = moody_df.copy()
+    ratings_df["rating_rank"] = ratings_df["lt_fc_rating"].apply(
+        lambda r: _MOODY_LT_SCALE.index(r) if r in _MOODY_LT_SCALE else 999
+    )
+    ratings_df = ratings_df[ratings_df["rating_rank"] < 999].sort_values("rating_rank")
+    ratings_df["country_plot"] = ratings_df["country_name"].replace(_MOODY_COUNTRY_NAME_MAP)
+
+    if ratings_df.empty:
+        st.warning("Sem dados de rating reconhecíveis no arquivo.")
+        return
+
+    # ── Controles ──────────────────────────────────────────────────
+    all_countries = sorted(ratings_df["country_name"].tolist())
+    default_hl = [c for c in ["Brazil", "Mexico", "Colombia", "Chile", "India", "China", "Argentina"]
+                  if c in all_countries]
+    c_sel, c_met = st.columns([3, 1])
+    with c_sel:
+        highlight = st.multiselect(
+            "Países em destaque (marcados no mapa)",
+            all_countries, default=default_hl, key="moody_map_hl",
+        )
+    with c_met:
+        st.metric("Países com rating Moody's", len(ratings_df))
+
+    # ── Mapa mundial ───────────────────────────────────────────────
+    present_ratings = [r for r in _MOODY_LT_SCALE if r in ratings_df["lt_fc_rating"].values]
+    color_map = {r: _MOODY_RATING_COLORS.get(r, "#aaaaaa") for r in present_ratings}
+
+    fig_map = px.choropleth(
+        ratings_df,
+        locations="country_plot",
+        locationmode="country names",
+        color="lt_fc_rating",
+        category_orders={"lt_fc_rating": present_ratings},
+        color_discrete_map=color_map,
+        title="Moody's LT FC Sovereign Rating – Mapa Mundial",
+        hover_name="country_name",
+        hover_data={"lt_fc_rating": True, "country_plot": False},
+    )
+    fig_map.update_geos(
+        showframe=False, showcoastlines=True,
+        projection_type="natural earth",
+        showland=True, landcolor="#f0f0f0",
+        showocean=True, oceancolor="#cfe2f3",
+    )
+    fig_map.update_layout(
+        legend_title_text="LT Rating",
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=500,
+    )
+    st.plotly_chart(fig_map, use_container_width=True)
+
+    # ── Tabela países em destaque ──────────────────────────────────
+    if highlight:
+        hl_df = (
+            ratings_df[ratings_df["country_name"].isin(highlight)]
+            [["country_name", "lt_fc_rating", "rating_rank"]]
+            .sort_values("rating_rank")
+            .drop(columns=["rating_rank"])
+            .rename(columns={"country_name": "País", "lt_fc_rating": "LT FC Rating"})
+        )
+        st.dataframe(hl_df, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ── Tabela completa ────────────────────────────────────────────
+    with st.expander("📋 Tabela completa de ratings por país"):
+        tbl = ratings_df[["country_name", "lt_fc_rating"]].rename(
+            columns={"country_name": "País", "lt_fc_rating": "LT FC Rating"}
+        )
+        st.dataframe(tbl, use_container_width=True, hide_index=True)
+        csv = tbl.to_csv(index=False).encode("utf-8-sig")
+        st.download_button(
+            "⬇️ Baixar CSV",
+            data=csv,
+            file_name="moody_ratings_map.csv",
+            mime="text/csv",
+            key="moody_dl_map_csv",
         )
 

@@ -13,6 +13,192 @@ from openpyxl import Workbook
 from openpyxl.chart import LineChart, Reference
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
 
+# ============================================================
+# Ratings Map – Mapa coroplético S&P
+# ============================================================
+
+_SP_RATING_COLORS = {
+    "AAA":  "#440154", "AA+":  "#482475", "AA":   "#414487", "AA-":  "#355f8d",
+    "A+":   "#2a788e", "A":    "#21918c", "A-":   "#22a884",
+    "BBB+": "#42be71", "BBB":  "#7ad151", "BBB-": "#bddf26",
+    "BB+":  "#fde725", "BB":   "#fbbf24", "BB-":  "#f97316",
+    "B+":   "#ef4444", "B":    "#dc2626", "B-":   "#b91c1c",
+    "CCC+": "#991b1b", "CCC":  "#7f1d1d", "CCC-": "#6b0000",
+    "CC":   "#4a0000", "C":    "#2d0000",
+}
+
+_SP_COUNTRY_NAME_MAP = {
+    "United States":          "United States of America",
+    "Korea, Republic of":     "South Korea",
+    "Korea, South":           "South Korea",
+    "Russia":                 "Russia",
+    "Czech Republic":         "Czechia",
+    "Ivory Coast":            "Côte d'Ivoire",
+    "Tanzania":               "United Republic of Tanzania",
+    "Congo, Dem. Rep.":       "Democratic Republic of the Congo",
+    "Congo, Rep.":            "Republic of the Congo",
+    "Eswatini":               "Swaziland",
+    "Türkiye":                "Turkey",
+    "Bosnia & Herzegovina":   "Bosnia and Herzegovina",
+    "Trinidad & Tobago":      "Trinidad and Tobago",
+}
+
+
+def render_ratings_map_sp(df: pd.DataFrame):
+    """Aba 🗺️ Mapa de Ratings – mapa mundial S&P + box plot por rating."""
+    if df is None or df.empty:
+        st.info("⬅️ Carregue o arquivo SRI para ativar o mapa.")
+        return
+
+    # ── 1. Rating por país (última linha) ──────────────────────────
+    ratings_df = (
+        df[["country_name", "lt_fc_rating"]]
+        .dropna(subset=["lt_fc_rating"])
+        .query("lt_fc_rating not in ('', 'NR', 'WD', 'SD', 'D', 'nan')")
+        .drop_duplicates("country_name")
+        .copy()
+    )
+    ratings_df["rating_rank"] = ratings_df["lt_fc_rating"].apply(
+        lambda r: RATING_SCALE.index(r.upper()) if r.upper() in RATING_SCALE else 999
+    )
+    ratings_df = ratings_df[ratings_df["rating_rank"] < 999].sort_values("rating_rank")
+    ratings_df["country_plot"] = ratings_df["country_name"].replace(_SP_COUNTRY_NAME_MAP)
+
+    if ratings_df.empty:
+        st.warning("Sem dados de rating no arquivo carregado.")
+        return
+
+    # ── 2. Controles ────────────────────────────────────────────────
+    all_countries = sorted(ratings_df["country_name"].tolist())
+    default_hl = [c for c in ["Brazil", "Mexico", "Colombia", "Chile", "India", "China", "Argentina"]
+                  if c in all_countries]
+    c_sel, c_met = st.columns([3, 1])
+    with c_sel:
+        highlight = st.multiselect(
+            "Países em destaque (rotulados no box plot)",
+            all_countries, default=default_hl, key="sp_map_hl",
+        )
+    with c_met:
+        st.metric("Países com rating S&P", len(ratings_df))
+
+    # ── 3. Mapa mundial ─────────────────────────────────────────────
+    present_ratings = [r for r in RATING_SCALE if r in ratings_df["lt_fc_rating"].values]
+    color_map = {r: _SP_RATING_COLORS.get(r, "#aaaaaa") for r in present_ratings}
+
+    fig_map = px.choropleth(
+        ratings_df,
+        locations="country_plot",
+        locationmode="country names",
+        color="lt_fc_rating",
+        category_orders={"lt_fc_rating": present_ratings},
+        color_discrete_map=color_map,
+        title="S&P LT FC Rating – Mapa Mundial",
+        hover_name="country_name",
+        hover_data={"lt_fc_rating": True, "country_plot": False},
+    )
+    fig_map.update_geos(
+        showframe=False, showcoastlines=True,
+        projection_type="natural earth",
+        showland=True, landcolor="#f0f0f0",
+        showocean=True, oceancolor="#cfe2f3",
+    )
+    fig_map.update_layout(
+        legend_title_text="LT FC Rating",
+        margin=dict(l=0, r=0, t=40, b=0),
+        height=500,
+    )
+    st_plotly_chart_compat(fig_map)
+
+    # ── 4. Tabela países em destaque ────────────────────────────────
+    if highlight:
+        hl_df = (
+            ratings_df[ratings_df["country_name"].isin(highlight)]
+            [["country_name", "lt_fc_rating", "rating_rank"]]
+            .sort_values("rating_rank")
+            .drop(columns=["rating_rank"])
+            .rename(columns={"country_name": "País", "lt_fc_rating": "LT FC Rating"})
+        )
+        st_dataframe_compat(hl_df, use_container_width=True, hide_index=True)
+
+    st.markdown("---")
+
+    # ── 5. Box plot de indicadores por rating ───────────────────────
+    st.subheader("📦 Distribuição de indicadores por rating")
+
+    indicators = sorted(df["indicator"].dropna().unique().tolist())
+    if not indicators:
+        st.info("Nenhum indicador disponível para o box plot.")
+        return
+
+    default_ind_idx = next(
+        (i for i, x in enumerate(indicators)
+         if "debt" in x.lower() and "gdp" in x.lower()), 0
+    )
+    sel_ind = st.selectbox(
+        "Indicador", indicators, index=default_ind_idx, key="sp_map_box_ind",
+    )
+
+    ind_df = (
+        df[
+            (df["indicator"] == sel_ind) &
+            (~df.get("is_forecast", pd.Series(False, index=df.index)))
+        ]
+        .dropna(subset=["value"])
+        .sort_values("year_num", ascending=False)
+        .drop_duplicates("country_name")
+        [["country_name", "value"]]
+    )
+
+    box_df = ind_df.merge(
+        ratings_df[["country_name", "lt_fc_rating", "rating_rank"]],
+        on="country_name", how="inner",
+    ).sort_values("rating_rank")
+
+    if box_df.empty:
+        st.warning("Sem dados para o indicador selecionado.")
+        return
+
+    ordered_cats = [r for r in RATING_SCALE if r in box_df["lt_fc_rating"].values]
+    fig_box = px.box(
+        box_df,
+        x="lt_fc_rating", y="value",
+        category_orders={"lt_fc_rating": ordered_cats},
+        title=f"{sel_ind} – distribuição por Rating S&P",
+        labels={"lt_fc_rating": "LT FC Rating", "value": ""},
+        points="outliers",
+    )
+
+    if highlight:
+        hl_pts = box_df[box_df["country_name"].isin(highlight)]
+        if not hl_pts.empty:
+            fig_box.add_trace(go.Scatter(
+                x=hl_pts["lt_fc_rating"],
+                y=hl_pts["value"],
+                mode="markers+text",
+                text=hl_pts["country_name"],
+                textposition="top center",
+                marker=dict(color="red", size=12, symbol="circle-open",
+                            line=dict(color="red", width=2)),
+                name="Destaque",
+                showlegend=True,
+            ))
+
+    fig_box.update_layout(height=480, margin=dict(l=40, r=20, t=50, b=40))
+    st_plotly_chart_compat(fig_box)
+
+    st.markdown("---")
+
+    # ── 6. Tabela completa ──────────────────────────────────────────
+    with st.expander("📋 Tabela completa de ratings por país"):
+        tbl = ratings_df[["country_name", "lt_fc_rating"]].rename(
+            columns={"country_name": "País", "lt_fc_rating": "LT FC Rating"}
+        )
+        st_dataframe_compat(tbl, use_container_width=True, hide_index=True)
+        csv = tbl.to_csv(index=False).encode("utf-8-sig")
+        st.download_button("⬇️ Baixar CSV", data=csv,
+                           file_name="sp_ratings_map.csv", mime="text/csv",
+                           key="sp_dl_map_csv")
+
 APP_DIR = Path(__file__).resolve().parent
 ASSETS_DIR = APP_DIR / "assets"
 DATA_DIR = APP_DIR / "data"
@@ -1790,7 +1976,9 @@ def render_sp():
         with st.expander("Filtros do SRI", expanded=False):
             filtered = build_filters(df)
 
-    tab1, tab2, tab3 = st.tabs(["Metodologia", "SRI – Dashboards", "SRI – Dados em tabela"])
+    tab1, tab2, tab3, tab4 = st.tabs([
+        "Metodologia", "SRI – Dashboards", "SRI – Dados em tabela", "🗺️ Mapa de Ratings",
+    ])
 
     with tab1:
         render_methodology_tab()
@@ -1820,3 +2008,10 @@ def render_sp():
 - **value**: valor numérico convertido para análise.
                     """
                 )
+
+    with tab4:
+        st.title("🗺️ Mapa de Ratings – S&P")
+        if df.empty:
+            st.info("⬅️ Carregue o arquivo SRI para ativar o mapa.")
+        else:
+            render_ratings_map_sp(df)
