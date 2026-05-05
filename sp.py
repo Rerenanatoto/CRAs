@@ -1288,6 +1288,31 @@ def auto_fill_from_sri(df, country_name):
 
 
 def render_methodology_tab():
+    st.markdown(
+        """
+        <style>
+        /* Fix dark expander background with black text */
+        div[data-testid="stExpander"] > div[role="button"] p { color: inherit !important; }
+        div[data-testid="stExpander"] > div[data-testid="stVerticalBlock"] {
+            background-color: var(--background-color, #ffffff);
+            color: var(--text-color, #31333f) !important;
+        }
+        div[data-testid="stExpander"] .stFileUploader label,
+        div[data-testid="stExpander"] .stFileUploader span,
+        div[data-testid="stExpander"] p,
+        div[data-testid="stExpander"] label {
+            color: var(--text-color, #31333f) !important;
+        }
+        /* Ensure button text is readable */
+        div[data-testid="stExpander"] .stButton button {
+            background-color: #1f77b4;
+            color: #ffffff !important;
+            border: none;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
     st.header("Metodologia")
     method_page = st.selectbox(
         "Seção da metodologia",
@@ -1358,7 +1383,7 @@ def render_methodology_tab():
 
 
     if method_page == "Visão geral":
-        st.title("📊 S&P Sovereign Rating Methodology – Dashboard")
+        st.title("📊 S&P Sovereign Rating Methodology")
         st.write(
             "Este dashboard é uma implementação **independente de Excel**, baseada no PDF de critérios. "
             "A metodologia avalia **cinco pilares** (1=mais forte, 6=mais fraco) e combina em dois perfis: "
@@ -1609,7 +1634,7 @@ def render_methodology_tab():
             if img.exists(): show_image(img)
             else: st.info("Imagem da Tabela 6 não encontrada em assets/.")
         st.markdown("---")
-        fiscal_final = round_to_half((perf_final + debt_final) / 2.0)
+        fiscal_final = float(clamp_score((perf_final + debt_final) / 2.0))
         st.metric("Fiscal assessment (average of the two segments)", fmt_score(fiscal_final))
         st.markdown("---")
         st.markdown("#### Resultado acumulado")
@@ -1772,7 +1797,7 @@ def render_methodology_tab():
                 )
     
         st.markdown("---")
-        final_monetary = min(6.0, initial_monetary + float(base_neg) + float(union_adj))
+        final_monetary = float(clamp_score(initial_monetary + float(base_neg) + float(union_adj)))
     
         st.markdown("## 5) Final monetary assessment")
         f1, f2, f3, f4 = st.columns(4)

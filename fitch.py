@@ -1209,29 +1209,54 @@ def render_methodology_overview():
 ### Fitch Sovereign Rating Methodology
 
 O modelo soberano da Fitch combina:
-- **SRM (Sovereign Rating Model)**: modelo quantitativo com 18 variáveis
-  agrupadas em 4 pilares, gerando um score numérico.
-- **QO (Qualitative Overlay)**: ajuste qualitativo de até ±3 notches
-  (extensível em crises), aplicado pilar a pilar.
-- **Ratings finais**: LT FC IDR → LT LC IDR → ST FC IDR → ST LC IDR.
+- **SRM (Sovereign Rating Model)**: modelo quantitativo com 18 variáveis agrupadas em 4 pilares, gerando um score numérico.
+- **QO (Qualitative Overlay)**: ajuste qualitativo de até ±3 notches (extensível em crises), aplicado pilar a pilar.
+- **Ratings finais**: LT FC IDR (Long-Term Foreign-Currency Issuer Default Rating) → LT LC IDR (Long-Term Local-Currency IDR) → ST FC IDR (Short-Term Foreign-Currency IDR) → ST LC IDR (Short-Term Local-Currency IDR).
+
+> **LT FC IDR** (Long-Term Foreign-Currency Issuer Default Rating): avalia a probabilidade de default em obrigações de longo prazo denominadas em moeda estrangeira. É o rating soberano principal, derivado diretamente do SRM + QO.
 
 #### Pilares do SRM
 
-| Pilar | Peso aprox. |
-|-------|-------------|
-| I. Structural Features | ~53% |
-| II. Macroeconomic Performance | ~10% |
-| III. Public Finances | ~19% |
-| IV. External Finances | ~17% |
+| Pilar | Peso (%) |
+|-------|---------|
+| I. Structural Features | 53,7% |
+| II. Macroeconomic Performance | 9,8% |
+| III. Public Finances | 19,1% |
+| IV. External Finances | 17,3% |
 
 #### Intercepto
 O intercepto OLS é **{intercept:.3f}**.
-
-#### Escala
-O score do SRM mapeia para a escala de rating usando arredondamento:
-- 16 = AAA, 15 = AA+, ..., 1 = B-
-- Abaixo de 1 → CCC+
     """.format(intercept=INTERCEPT))
+
+    st.markdown("#### Escala SRM → Rating")
+    st.markdown("O score do SRM (arredondado) mapeia para a escala de rating da seguinte forma:")
+    srm_scale_data = [
+        {"Score SRM": "≥ 16", "Rating": "AAA"},
+        {"Score SRM": "15", "Rating": "AA+"},
+        {"Score SRM": "14", "Rating": "AA"},
+        {"Score SRM": "13", "Rating": "AA−"},
+        {"Score SRM": "12", "Rating": "A+"},
+        {"Score SRM": "11", "Rating": "A"},
+        {"Score SRM": "10", "Rating": "A−"},
+        {"Score SRM": "9",  "Rating": "BBB+"},
+        {"Score SRM": "8",  "Rating": "BBB"},
+        {"Score SRM": "7",  "Rating": "BBB−"},
+        {"Score SRM": "6",  "Rating": "BB+"},
+        {"Score SRM": "5",  "Rating": "BB"},
+        {"Score SRM": "4",  "Rating": "BB−"},
+        {"Score SRM": "3",  "Rating": "B+"},
+        {"Score SRM": "2",  "Rating": "B"},
+        {"Score SRM": "1",  "Rating": "B−"},
+        {"Score SRM": "≤ 0", "Rating": "CCC+"},
+    ]
+    _scale_df = pd.DataFrame(srm_scale_data)
+    st.dataframe(_scale_df, use_container_width=False, hide_index=True)
+    with st.expander("📷 Ver tabela da metodologia (imagem)"):
+        _scale_img = ASSETS_DIR / "page_06_img_01.png"
+        if _scale_img.exists():
+            st.image(str(_scale_img), caption="SRM Correspondence Table – Fitch Ratings", use_container_width=True)
+        else:
+            st.info("Imagem não encontrada em assets/." )
 
 
 def render_methodology_pillar(pillar_key):

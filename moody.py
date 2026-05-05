@@ -703,12 +703,12 @@ def render_moody():
 
     with tab_met:
         page = st.selectbox("📌 Section", [
-            "📋 Overview",
-            "1️⃣ Economic Strength",
-            "2️⃣ Institutions & Governance",
-            "3️⃣ Fiscal Strength",
-            "4️⃣ Susceptibility to Event Risk",
-            "🏆 Results",
+            "Visão geral",
+            "Economic Strength",
+            "Institutions & Governance",
+            "Fiscal Strength",
+            "Susceptibility to Event Risk",
+            "Results",
         ], key="moody_page")
 
         st.markdown("---")
@@ -716,7 +716,7 @@ def render_moody():
         # ═══════════════════════════════════════════════════════════════════
         # FACTOR 1 – ECONOMIC STRENGTH
         # ═══════════════════════════════════════════════════════════════════
-        if page == "📋 Overview":
+        if page == "Visão geral":
             st.header("📋 Methodology Overview")
             st.markdown(
                 "The Moody\u2019s Sovereign Rating Methodology (Nov 2022) combines **four broad factors** "
@@ -731,10 +731,10 @@ def render_moody():
                 "ER is combined with Factor 3 via the **GFS matrix** to produce the **Government Financial Strength (GFS)**. "
                 "Finally, GFS is combined with SETR via the **Final matrix** to produce the **Indicative Sovereign Rating**."
             )
-            st.subheader("Scorecard Framework")
+            st.subheader("Estrutura do Scorecard")
             st.image(str(ASSETS_DIR / "moody_framework.png"), use_container_width=True)
             st.markdown("---")
-            st.subheader("Scorecard Overview (Exhibit 2)")
+            st.subheader("Visão Geral do Scorecard (Exhibit 2)")
             st.image(str(ASSETS_DIR / "moody_scorecard_overview.png"), use_container_width=True)
             st.markdown("---")
             st.subheader("WGI \u2013 World Governance Indicators")
@@ -751,12 +751,12 @@ def render_moody():
                 "WGI scores range from approximately **-2.5** (weak) to **+2.5** (strong)."
             )
             st.markdown("---")
-            st.subheader("Scoring Scale (Exhibits 14 & 15)")
+            st.subheader("Escala de Pontuação (Exhibits 14 e 15)")
             st.image(str(ASSETS_DIR / "moody_subfactor_scores.png"), use_container_width=True)
             st.image(str(ASSETS_DIR / "moody_scoring_scale.png"), use_container_width=True)
 
-        elif page == "1️⃣ Economic Strength":
-            st.header("1️⃣ Factor 1 – Economic Strength")
+        elif page == "Economic Strength":
+            st.header("Fator 1 – Força Econômica")
             st.markdown("Evaluates the growth dynamics, scale of the economy, and national income.")
             with st.expander("📊 Methodology reference – Economic Strength scoring ranges"):
                 st.image(str(ASSETS_DIR / "moody_factor1_ranges.png"), use_container_width=True)
@@ -816,8 +816,8 @@ def render_moody():
         # ═══════════════════════════════════════════════════════════════════
         # FACTOR 2 – INSTITUTIONS & GOVERNANCE (opções descritivas)
         # ═══════════════════════════════════════════════════════════════════
-        elif page == "2️⃣ Institutions & Governance":
-            st.header("2️⃣ Factor 2 – Institutions & Governance")
+        elif page == "Institutions & Governance":
+            st.header("Fator 2 – Instituições & Governança")
             st.markdown("Assesses institutional quality and policy effectiveness.")
             st.caption("WGI: **GE** = Government Effectiveness · **RL** = Rule of Law · **CC** = Control of Corruption")
             st.markdown("---")
@@ -904,8 +904,8 @@ def render_moody():
             _m4.metric("Economic Resiliency Rating", _er_rating.upper())
 
     
-        elif page == "3️⃣ Fiscal Strength":
-            st.header("3️⃣ Factor 3 – Fiscal Strength")
+        elif page == "Fiscal Strength":
+            st.header("Fator 3 – Força Fiscal")
             st.markdown("Evaluates fiscal sustainability: debt burden and debt affordability.")
             with st.expander("📊 Methodology reference – Fiscal Strength scoring ranges"):
                 st.image(str(ASSETS_DIR / "moody_factor3_ranges.png"), use_container_width=True)
@@ -1107,7 +1107,7 @@ def render_moody():
             _m3.metric("Rating Final (acum. F1–F4)", _final['final_rating'].upper())
         # ═══════════════════════════════════════════════════════════════════
         else:
-            st.header("🏆 Results – Consolidated Scorecard")
+            st.header("Results – Scorecard Consolidado")
             st.markdown("**Consolidated view of all factors, sub-scores and final rating.**")
             st.markdown("---")
 
