@@ -757,7 +757,7 @@ def sri_to_excel(df: pd.DataFrame) -> bytes:
 # Lógica SRI
 # ============================================================
 
-def find_local_xlsx() -> Path | None:
+def find_local_xlsx() -> "Path | None":
     preferred_names = [
         DATA_DIR / "base.xlsx",
         DATA_DIR / "report.xlsx",

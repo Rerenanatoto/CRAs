@@ -1332,7 +1332,7 @@ _MOODY_COUNTRY_NAME_MAP = {
 }
 
 
-def _find_local_moody_xlsx() -> Path | None:
+def _find_local_moody_xlsx() -> "Path | None":
     """Return the first Moody's Sovereign ratings .xlsx found in data/."""
     patterns = ["Sovereign-Supranational-Rating*.xlsx", "moody*sovereign*.xlsx",
                 "Moody*Sovereign*.xlsx"]
