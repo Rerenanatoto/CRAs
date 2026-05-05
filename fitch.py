@@ -115,10 +115,10 @@ SRM_VARIABLES = {
             "coefficient": 0.484, "weight": 7.1,
             "help": "Use 0 if the sovereign has no reserve-currency flexibility.",
         },
-        "sovereign_net_foreign_assets": {
-            "label": "Sovereign net foreign assets (% of GDP, 3-year centred average)",
+        "sovereign_net_foreign_s": {
+            "label": "Sovereign net foreign s (% of GDP, 3-year centred average)",
             "coefficient": 0.010, "weight": 7.5,
-            "help": "Three-year centred average of sovereign net foreign assets.",
+            "help": "Three-year centred average of sovereign net foreign s.",
         },
         "commodity_dependence": {
             "label": "Commodity dependence (% of current external receipts)",
@@ -220,7 +220,7 @@ VARIABLE_RULES = {
     "general_govt_fiscal_balance": {"step": 0.1, "soft_min": -50, "soft_max": 50},
     "fc_govt_debt_share": {"step": 0.1, "soft_min": 0, "soft_max": 100},
     "reserve_currency_flexibility": {"step": 0.1, "soft_min": 0, "soft_max": 20},
-    "sovereign_net_foreign_assets": {"step": 0.1, "soft_min": -300, "soft_max": 300},
+    "sovereign_net_foreign_s": {"step": 0.1, "soft_min": -300, "soft_max": 300},
     "commodity_dependence": {"step": 0.1, "soft_min": 0, "soft_max": 100},
     "fx_reserves_months_cxp": {"step": 0.1, "soft_min": 0, "soft_max": 60},
     "external_interest_service": {"step": 0.1, "soft_min": 0, "soft_max": 100},
@@ -245,7 +245,7 @@ SRM_XLSB_MAP = {
     "general_govt_fiscal_balance": {"indicators": ["GG balance"], "unit_hint": "% GDP", "section_hint": "GOVERNMENT", "measure": "3yr_avg", "transform": None},
     "fc_govt_debt_share": {"indicators": ["Public FC", "Foreign own-p", "FC govt"], "measure": "3yr_avg", "transform": None},
     "reserve_currency_flexibility": {"indicators": ["SRM-reserve", "SRM reserve"], "measure": "latest", "transform": None},
-    "sovereign_net_foreign_assets": {"indicators": ["SNFA", "Sovereign net foreign"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
+    "sovereign_net_foreign_s": {"indicators": ["SNFA", "Sovereign net foreign"], "unit_hint": "% GDP", "measure": "3yr_avg", "transform": None},
     "commodity_dependence": {"indicators": ["Comm. dep", "Commodity dep", "commodity depend"], "measure": "latest", "transform": None},
     "fx_reserves_months_cxp": {"indicators": ["Reserves", "FX reserves"], "unit_hint": "months", "measure": "latest", "transform": None},
     "external_interest_service": {"indicators": ["Ext. int", "External interest"], "unit_hint": "% CXR", "exclude": ["% GDP"], "measure": "3yr_avg", "transform": None},
@@ -624,7 +624,7 @@ def init_state():
             "general_govt_fiscal_balance": -3.0,
             "fc_govt_debt_share": 35.0,
             "reserve_currency_flexibility": 0.0,
-            "sovereign_net_foreign_assets": -20.0,
+            "sovereign_net_foreign_s": -20.0,
             "commodity_dependence": 25.0,
             "fx_reserves_months_cxp": 4.0,
             "external_interest_service": 8.0,
@@ -1252,11 +1252,11 @@ O intercepto OLS é **{intercept:.3f}**.
     _scale_df = pd.DataFrame(srm_scale_data)
     st.dataframe(_scale_df, use_container_width=False, hide_index=True)
     with st.expander("📷 Ver tabela da metodologia (imagem)"):
-        _scale_img = APP_DIR / "assets" / "page_06_img_01.png"
+        _scale_img = APP_DIR / "s" / "fitch_srm.png"
         if _scale_img.exists():
             st.image(str(_scale_img), caption="SRM Correspondence Table – Fitch Ratings", use_container_width=True)
         else:
-            st.info("Imagem não encontrada em assets/." )
+            st.info("Imagem não encontrada em s/." )
 
 
 def render_methodology_pillar(pillar_key):
